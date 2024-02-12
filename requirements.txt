@@ -1,0 +1,5 @@
+gym==0.26.2
+gym-notices==0.0.8
+matplotlib==3.8.2
+numpy==1.26.3
+simpy==4.1.1
