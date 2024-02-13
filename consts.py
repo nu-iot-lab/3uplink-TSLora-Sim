@@ -23,11 +23,9 @@ pow_cons = [75, 45, 30]
 V = 3.3  # voltage XXX
 
 # global
-join_gateway = None
 data_gateway = None
 nodes = []
 packets_at_bs = []
-join_request_at_bs = []
 
 coding_rate = 1
 drifting_range = [-0.2, 0.2]
@@ -36,7 +34,6 @@ std_dev = 0.0001  # Standard deviation of the normal distribution
 
 # Statistics
 nr_collisions = 0
-nr_join_collisions = 0
 nr_data_collisions = 0
 nr_received = 0
 nr_processed = 0
@@ -45,14 +42,9 @@ nr_packets_sent = 0
 nr_data_packets_sent = 0
 nr_retransmission = 0
 nr_data_retransmissions = 0
-nr_join_req_sent = 0
-nr_join_req_dropped = 0
-nr_join_acp_sent = 0
 nr_sack_sent = 0
 nr_sack_missed_count = 0
 
-nr_joins = 0
-total_join_time = 0
 total_energy = 0
 
 erx = 0

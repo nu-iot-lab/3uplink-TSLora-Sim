@@ -13,10 +13,14 @@ class Frame:
         global nodes
         self.sf = sf
         self.data_p_rec_time = DataPacket(sf).rec_time
-        self.min_frame_length = 3 * 100 * self.data_p_rec_time  # 3 slots for each packet
+        self.min_frame_length = (
+            3 * 100 * self.data_p_rec_time
+        )  # 3 slots for each packet
         # self.guard_time = 3 * 0.0001 * self.min_frame_length
         self.guard_time = 2  # 2ms
-        self.min_nr_slots = int(self.min_frame_length / (self.data_p_rec_time + 2 * self.guard_time))
+        self.min_nr_slots = int(
+            self.min_frame_length / (self.data_p_rec_time + 2 * self.guard_time)
+        )
 
         self.nr_slots = self.min_nr_slots
         self.nr_taken_slots = 0
@@ -52,15 +56,21 @@ class Frame:
 
                 df = drifting_times[i]
                 start_time_n = env.now + self.data_slot_len * i + df + self.guard_time
-                end_time_n = env.now + self.data_slot_len * (i + 1) - self.guard_time + df
+                end_time_n = (
+                    env.now + self.data_slot_len * (i + 1) - self.guard_time + df
+                )
 
                 # generate drifting time for the previous slot if it hasn't been generated before
                 if i - 1 not in drifting_times:
                     drifting_times[i - 1] = gauss(0, 0.5)
 
                 df_prev = drifting_times[i - 1]
-                start_time_prev = env.now + self.data_slot_len * (i - 1) + df_prev + self.guard_time
-                end_time_prev = env.now + self.data_slot_len * i - self.guard_time + df_prev
+                start_time_prev = (
+                    env.now + self.data_slot_len * (i - 1) + df_prev + self.guard_time
+                )
+                end_time_prev = (
+                    env.now + self.data_slot_len * i - self.guard_time + df_prev
+                )
 
                 if start_time_n <= end_time_prev and start_time_prev <= end_time_n:
                     nr_data_collisions += 1
@@ -70,15 +80,21 @@ class Frame:
         sack_packet = SackPacket(self.nr_slots, self.sf)
         self.sack_p_rec_time = sack_packet.airtime()
         if self.nr_taken_slots > self.min_nr_slots:
-            self.frame_length = (self.nr_slots * self.data_p_rec_time + self.sack_p_rec_time) / (
-                    1.0 - 6 * 0.0001 * (self.nr_slots + 1))
+            self.frame_length = (
+                self.nr_slots * self.data_p_rec_time + self.sack_p_rec_time
+            ) / (1.0 - 6 * 0.0001 * (self.nr_slots + 1))
         # self.guard_time = 3 * 0.0001 * self.frame_length
         self.guard_time = 2
         self.data_slot_len = self.data_p_rec_time + 2 * self.guard_time
         self.sack_slot_len = self.sack_p_rec_time + 2 * self.guard_time
 
     def next_frame(self):
-        self.trans_time = self.next_round_start_time + self.frame_length - self.sack_slot_len + self.guard_time
+        self.trans_time = (
+            self.next_round_start_time
+            + self.frame_length
+            - self.sack_slot_len
+            + self.guard_time
+        )
         self.trans_time_period = self.sack_p_rec_time + self.guard_time
         self.next_round_start_time = self.trans_time + self.trans_time_period + 1
         self.nr_slots_SACK = self.nr_slots
@@ -110,5 +126,5 @@ class Frame:
         node.slot[2] = None
 
     def __str__(self):
-        slots = [str(node) if node is not None else 'None' for node in self.slots]
-        return f'Frame: {slots}'
+        slots = [str(node) if node is not None else "None" for node in self.slots]
+        return f"Frame: {slots}"
