@@ -68,7 +68,7 @@ def show_final_statistics():
     global nr_data_retransmissions
     nr_data_retransmissions = nr_sack_missed_count + nr_lost + nr_data_collisions
 
-    print("Join Request Collisions:", nr_collisions)
+    # print("Join Request Collisions:", nr_collisions)
     print("Data collisions:", nr_data_collisions)
     print("Lost packets (due to path loss):", nr_lost)
     print("Transmitted data packets:", nr_data_packets_sent)
@@ -76,15 +76,15 @@ def show_final_statistics():
     #	print("\tNode", n.node_id, "sent", n.packets_sent_count, "packets")
     print("Transmitted SACK packets:", nr_sack_sent)
     print("Missed SACK packets:", nr_sack_missed_count)
-    print("Transmitted join request packets:", nr_join_req_sent)
-    print("Transmitted join accept packets:", nr_join_acp_sent)
-    print("Join Request Retransmissions:", nr_retransmission)
+    # print("Transmitted join request packets:", nr_join_req_sent)
+    # print("Transmitted join accept packets:", nr_join_acp_sent)
+    # print("Join Request Retransmissions:", nr_retransmission)
     print("Data Retransmissions:", nr_data_retransmissions)
-    print("Join request packets dropped by gateway:", nr_join_req_dropped)
-    print(f"Average join time: {avr_join:.3f} s")
+    # print("Join request packets dropped by gateway:", nr_join_req_dropped)
+    # print(f"Average join time: {avr_join:.3f} s")
     print(f"Average energy consumption (Rx): {(erx / nodes_count):.3f} J")
     print(f"Average energy consumption (Tx): {(etx / nodes_count):.3f} J")
     print(f"Average energy consumption per node: {total_energy / nodes_count:.3f} J")
-    print(f"PRR: {(nr_data_packets_sent - nr_data_retransmissions) / nr_data_packets_sent:.3f}")
-    print(f"Number of nodes failed to connect to the network:",
-          nodes_count - nr_joins if nodes_count - nr_joins >= 0 else 0)
+    # print(f"PRR: {(nr_data_packets_sent - nr_data_retransmissions) / nr_data_packets_sent:.3f}")
+    # print(f"Number of nodes failed to connect to the network:",
+    #       nodes_count - nr_joins if nodes_count - nr_joins >= 0 else 0)

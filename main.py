@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
         simulator.start_simulation()
 
-        # show_final_statistics()
+        show_final_statistics()
     else:
         print("usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>")
         exit(-1)
