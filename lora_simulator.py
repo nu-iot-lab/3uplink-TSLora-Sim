@@ -1,4 +1,4 @@
-from consts import *
+import consts
 from entities import EndNode
 from singleton import EnvironmentSingleton, DataGatewaySingleton
 
@@ -15,26 +15,27 @@ class LoraSimulator:
         self.sim_time = sim_time
 
     def add_nodes(self):
-        global nodes
+        print("\n!--NODES--!\n")
         for i in range(self.nodes_count):
-            nodes.append(EndNode(i, data_gateway))
+            consts.nodes.append(EndNode(i, data_gateway))
 
     def start_simulation(self):
-        global nodes
-        print("Simulation started")
+        print("\n!--START--!\n")
         # initialize slots inside the frame
         for sf in range(7, 10):
             data_gateway.frame(sf).assign_slots()
 
-        for node in nodes:
+        for node in consts.nodes:
             env.process(node.transmit(env))
 
         for sf in range(7, 10):
             env.process(data_gateway.transmit_sack(env, sf))
 
         env.run(until=self.sim_time)
-        print("Simulation ended")
+        print("\n!--END--!\n")
 
     def __str__(self):
-        return "LoraSimulator(nodes_count=%s, data_size=%s, avg_wake_up_time=%s, sim_time=%s)" % (
-            self.nodes_count, self.data_size, self.avg_wake_up_time, self.sim_time)
+        return (
+            "LoraSimulator(nodes_count=%s, data_size=%s, avg_wake_up_time=%s, sim_time=%s)"
+            % (self.nodes_count, self.data_size, self.avg_wake_up_time, self.sim_time)
+        )

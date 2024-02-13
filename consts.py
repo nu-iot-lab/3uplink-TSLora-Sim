@@ -25,7 +25,6 @@ V = 3.3  # voltage XXX
 # global
 data_gateway = None
 nodes = []
-packets_at_bs = []
 
 coding_rate = 1
 drifting_range = [-0.2, 0.2]

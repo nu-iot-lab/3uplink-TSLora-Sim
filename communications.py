@@ -1,7 +1,8 @@
 # from entities import NetworkNode
 from broadcast_traffic import BroadcastTraffic
 from utils import *
-from consts import *
+import consts
+import numpy as np
 import math
 import random
 from channels import Channels
@@ -15,7 +16,7 @@ class Packet:
         self.node = NetworkNode() if node is None else node
         self.receiver = None if receiver is None else receiver
 
-        self.cr = coding_rate
+        self.cr = consts.coding_rate
         self.bw, self.sf, self.pl, self.rec_time = 0, 0, 0, 0
 
         self.collided = False
@@ -25,11 +26,18 @@ class Packet:
         self.add_time = None
 
     def energy_transmit(self):
-        return self.airtime() * (pow_cons[0] + pow_cons[2]) * V / 1e6
+        return (
+            self.airtime() * (consts.pow_cons[0] + consts.pow_cons[2]) * consts.V / 1e6
+        )
 
     def energy_receive(self):
         if self.is_received():
-            return (50 + self.airtime()) * (pow_cons[1] + pow_cons[2]) * V / 1e6
+            return (
+                (50 + self.airtime())
+                * (consts.pow_cons[1] + consts.pow_cons[2])
+                * consts.V
+                / 1e6
+            )
         return 0
 
     def dist(self, destination):
@@ -42,11 +50,11 @@ class Packet:
         # xs = variance * random.gauss(0, 0.01)
         # + np.random.normal(-variance, variance)
         Lpl = (
-            Lpld0
-            + 10 * gamma * math.log10(self.dist(destination) / d0)
-            + np.random.normal(-variance, variance)
+            consts.Lpld0
+            + 10 * consts.gamma * math.log10(self.dist(destination) / consts.d0)
+            + np.random.normal(-consts.variance, consts.variance)
         )
-        Prx = Ptx - GL - Lpl
+        Prx = consts.Ptx - consts.GL - Lpl
         return Prx  # threshold is 12 dB
 
     def is_lost(self, destination):
@@ -86,31 +94,23 @@ class Packet:
 
     def update_statistics(self):
         if self.lost:
-            global nr_lost
-            nr_lost += 1
+            consts.nr_lost += 1
 
         if self.collided:
-            global nr_collisions
-            nr_collisions += 1
+            consts.nr_collisions += 1
 
         if self.is_received():
-            global nr_received
-            nr_received += 1
+            consts.nr_received += 1
 
         if self.processed:
-            global nr_processed
-            nr_processed += 1
+            consts.nr_processed += 1
 
         if self.sent:
-            global nr_packets_sent
-            nr_packets_sent += 1
+            consts.nr_packets_sent += 1
 
-        global total_energy
-        global erx
-        global etx
-        erx += self.energy_receive()
-        etx += self.energy_transmit()
-        total_energy += self.energy_transmit() + self.energy_receive()
+        consts.erx += self.energy_receive()
+        consts.etx += self.energy_transmit()
+        consts.total_energy += self.energy_transmit() + self.energy_receive()
 
     def is_received(self):
         return not self.collided and self.processed and not self.lost
@@ -120,7 +120,7 @@ class Packet:
 
     def check_collision(self):
         self.processed = True
-        if BroadcastTraffic.nr_data_packets > max_packets:
+        if BroadcastTraffic.nr_data_packets > consts.max_packets:
             log(
                 env, "[PACKET-OVERFLOW] too many packets are being sent to the gateway:"
             )
@@ -162,7 +162,7 @@ class Packet:
 
 class DataPacket(Packet):
     def __init__(self, sf=None, node=None):
-        super().__init__(node, data_gateway)
+        super().__init__(node, consts.data_gateway)
         if sf not in [7, 8, 9]:
             sf = random.choice([7, 8, 9])
         self.sf = sf
@@ -174,8 +174,7 @@ class DataPacket(Packet):
     def update_statistics(self):
         super().update_statistics()
         if self.sent:
-            global nr_data_packets_sent
-            nr_data_packets_sent += 1
+            consts.nr_data_packets_sent += 1
 
         if self.sent and self.node is not None:
             self.node.packets_sent_count += 1
@@ -196,7 +195,7 @@ class SackPacket(Packet):
     def update_statistics(self):
         super().update_statistics()
         if self.sent:
-            global nr_sack_sent
+            consts.nr_sack_sent += 1
 
     def was_sent_to(self, node):
         return self.sf == node.sf

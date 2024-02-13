@@ -1,4 +1,5 @@
-from consts import *
+import consts
+import numpy as np
 from singleton import EnvironmentSingleton, DataGatewaySingleton, ArgumentSingleton
 import random, math
 from utils import *
@@ -9,8 +10,9 @@ from frame import Frame
 environment = EnvironmentSingleton.get_instance()
 args = ArgumentSingleton.get_instance()
 
+
 class NetworkNode:
-    def __init__(self, node_id = None):
+    def __init__(self, node_id=None):
         if node_id is not None:
             self.node_id = node_id
         self.x, self.y = 0, 0
@@ -19,7 +21,7 @@ class NetworkNode:
 class Gateway(NetworkNode):
     def __init__(self, node_id=None):
         super().__init__(node_id)
-        self.x, self.y = bsx, bsy
+        self.x, self.y = consts.bsx, consts.bsy
 
     @staticmethod
     def is_gateway():
@@ -37,10 +39,11 @@ class DataGateway(Gateway):
     def frame(self, sf):
         if sf > 6:
             return self.frames[sf - 7]
-        raise  ValueError("sf must be greater than 6")
+        raise ValueError("sf must be greater than 6")
 
     def transmit_sack(self, env, sf):
         from communications import SackPacket
+
         # main sack packet transmission loop
         while True:
             yield env.timeout(self.frame(sf).trans_time - env.now)
@@ -48,17 +51,19 @@ class DataGateway(Gateway):
 
             # print("-" * 70)
             if self.frame(sf).nr_taken_slots != 0:
-                log(env,
-                    f'[SACK-TRANSMIT]'
+                log(
+                    env,
+                    f"[SACK-TRANSMIT]"
                     f'{f"SF: {sf} ":<10}'
                     f'{f"Data size: {sack_packet.pl} b ":<20}'
                     f'{"":<25}'
                     f'{f"Freq: {sack_packet.freq / 1000000.0:.3f} MHZ ":<24}'
                     f'{f"BW: {sack_packet.bw}  kHz ":<18}'
-                    f'{f"Airtime: {sack_packet.rec_time / 1000.0:.3f} s ":<22}')
+                    f'{f"Airtime: {sack_packet.rec_time / 1000.0:.3f} s ":<22}',
+                )
             # print("-" * 70)
 
-            for n in nodes:
+            for n in consts.nodes:
                 if n.connected and n.sf == sf:
                     env.process(self.transmit_sack_to_node(env, n, sf))
 
@@ -68,13 +73,17 @@ class DataGateway(Gateway):
     def transmit_sack_to_node(self, env, node, sf):
         from communications import SackPacket
         from singleton import DataGatewaySingleton
+
         data_gateway = DataGatewaySingleton.get_instance().data_gateway
         sack_packet = SackPacket(self.frame(sf).nr_slots_SACK, sf, self)
         sack_packet.add_time = env.now
 
         if sack_packet.is_lost(node):
             sack_packet.lost = True
-            log(env, f"[SACK-FAIL] {self} transmit to {node} SACK failed, too much path loss: {sack_packet.rssi(node)}")
+            log(
+                env,
+                f"[SACK-FAIL] {self} transmit to {node} SACK failed, too much path loss: {sack_packet.rssi(node)}",
+            )
 
         sack_packet.check_collision()
 
@@ -103,7 +112,7 @@ class EndNode(NetworkNode):
         self.missed_sack_count = 0
         self.packets_sent_count = 0
 
-        self.connected = True # for now
+        self.connected = True  # for now
         self.accept_received = False
         self.waiting_first_sack = True
 
@@ -121,10 +130,15 @@ class EndNode(NetworkNode):
         self.sack_packet_received = environment.event()
 
         self.x, self.y = EndNode.find_place_for_new_node()
-        self.dist = np.sqrt((self.x - bsx) * (self.x - bsx) + (self.y - bsy) * (self.y - bsy))
+        self.dist = np.sqrt(
+            (self.x - consts.bsx) * (self.x - consts.bsx)
+            + (self.y - consts.bsy) * (self.y - consts.bsy)
+        )
 
         self.sf = self.find_optimal_sf()
-        print(f"node {self.node_id}: \t x {self.x:3f} \t y {self.y:3f} \t dist {self.dist:4.3f} \t SF {self.sf}")
+        print(
+            f"node {self.node_id}: \t x {self.x:3f} \t y {self.y:3f} \t dist {self.dist:4.3f} \t SF {self.sf}"
+        )
 
     def __str__(self):
         # return "EndNode: " + str(self.node_id) + " x: " + str(self.x) + " y: " + str(self.y) + " sf: " + str(self.sf)
@@ -136,7 +150,6 @@ class EndNode(NetworkNode):
 
     @staticmethod
     def find_place_for_new_node():
-        global nodes
         found = False
         rounds = 0
         while not found and rounds < 100:
@@ -145,14 +158,14 @@ class EndNode(NetworkNode):
 
             if b < a:
                 a, b = b, a
-            posx = b * max_dist * math.cos(2 * math.pi * a / b) + bsx
-            posy = b * max_dist * math.sin(2 * math.pi * a / b) + bsy
+            posx = b * consts.max_dist * math.cos(2 * math.pi * a / b) + consts.bsx
+            posy = b * consts.max_dist * math.sin(2 * math.pi * a / b) + consts.bsy
 
-            if len(nodes) == 0:
+            if len(consts.nodes) == 0:
                 found = True
                 break
 
-            for index, n in enumerate(nodes):
+            for index, n in enumerate(consts.nodes):
                 dist = np.sqrt(((abs(n.x - posx)) ** 2) + ((abs(n.y - posy)) ** 2))
                 if dist >= 10:
                     found = True
@@ -169,7 +182,9 @@ class EndNode(NetworkNode):
             for i in range(10):
                 isLost = False
                 data_packet = DataPacket(sf, self)
-                if data_packet.rssi(self.data_gateway) < get_sensitivity(sf, data_packet.bw):
+                if data_packet.rssi(self.data_gateway) < get_sensitivity(
+                    sf, data_packet.bw
+                ):
                     isLost = True
                     break
             if not isLost:
@@ -178,7 +193,6 @@ class EndNode(NetworkNode):
         return None
 
     def transmit(self, env):
-        global nr_sack_missed_count
         while True:
             # calculating round start time
             yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
@@ -195,7 +209,7 @@ class EndNode(NetworkNode):
                 log(env, f"[SACK-MISSED] {self}: missed sack packet")
                 self.round_start_time = env.now + 1
                 self.missed_sack_count += 1
-                nr_sack_missed_count += 1
+                consts.nr_sack_missed_count += 1
             else:
                 self.missed_sack_count = 0
 
@@ -211,19 +225,21 @@ class EndNode(NetworkNode):
             # calculating round_end_time and waiting till send_time
             self.round_end_time = env.now + self.frame_length
             send_time = (self.slot[0] + self.counter_index) * (
-                        DataPacket(self.sf).rec_time + 2 * self.guard_time) + self.guard_time
+                DataPacket(self.sf).rec_time + 2 * self.guard_time
+            ) + self.guard_time
             self.counter_index += 1
             if self.counter_index == 2:
                 self.counter_index = 0
             if self.slot[0] != 0:
-                send_time = send_time + random.gauss(0, sigma) * self.guard_time
+                send_time = send_time + random.gauss(0, consts.sigma) * self.guard_time
             yield env.timeout(send_time)
 
             data_packet = DataPacket(self.sf, self)
             data_packet.add_time = env.now
             data_packet.sent = True
             # [NODE-SEND-PACKET] -- node {self.node_id} sent data packet
-            log(env,
+            log(
+                env,
                 f'{f"[NODE-SEND-PACKET-{self.node_id}]":<40}'
                 f'{f"SF: {data_packet.sf} ":<10}'
                 f'{f"Data size: {data_packet.pl} b ":<20}'
@@ -231,9 +247,12 @@ class EndNode(NetworkNode):
                 f'{f"Freq: {data_packet.freq / 1000000.0:.3f} MHZ ":<24}'
                 f'{f"BW: {data_packet.bw}  kHz ":<18}'
                 f'{f"Airtime: {data_packet.rec_time / 1000.0:.3f} s ":<22}'
-                f'{f"Guardtime: {self.guard_time / 1000.0:.3f} ms"}')
+                f'{f"Guardtime: {self.guard_time / 1000.0:.3f} ms"}',
+            )
 
-            if data_packet.rssi(self.data_gateway) < get_sensitivity(data_packet.sf, data_packet.bw):
+            if data_packet.rssi(self.data_gateway) < get_sensitivity(
+                data_packet.sf, data_packet.bw
+            ):
                 log(env, f"[NODE-LOST] {self}: packet will be lost")
                 data_packet.lost = True
 
