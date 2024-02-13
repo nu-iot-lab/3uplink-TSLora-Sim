@@ -83,13 +83,11 @@ class DataGateway(Gateway):
         data_gateway.frame(sf).check_data_collision()
 
         if sack_packet.is_received():
-            print(f"[SACK-RECEIVED] {node} received SACK packet")
-            print(f"round start time: {node.round_start_time}")
+            log(env, f"[SACK-RECEIVED] {node} received SACK packet")
             node.round_start_time = self.frame(sf).next_round_start_time
             node.network_size = self.frame(sf).nr_slots
             node.guard_time = self.frame(sf).guard_time
             node.frame_length = self.frame(sf).frame_length
-            print(f"round start time: {node.round_start_time}")
             if node.waiting_first_sack:
                 node.sack_packet_received.succeed()
         else:
@@ -193,7 +191,7 @@ class EndNode(NetworkNode):
 
             if self.round_start_time < env.now:
                 log(env, f"[SACK-MISSED] {self}: missed sack packet")
-                print(f"round_start_time: {self.round_start_time} env.now: {env.now} diff: {self.round_start_time - env.now}")
+                # print(f"round_start_time: {self.round_start_time} env.now: {env.now} diff: {self.round_start_time - env.now}")
                 self.round_start_time = env.now + 1
                 self.missed_sack_count += 1
                 nr_sack_missed_count += 1
