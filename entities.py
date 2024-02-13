@@ -181,7 +181,7 @@ class EndNode(NetworkNode):
         global nr_sack_missed_count
         while True:
             # calculating round start time
-            # yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
+            yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
             if self.waiting_first_sack:
                 yield self.sack_packet_received
                 # print(f"Node {self.node_id} received its first SACK packet at simulation time {env.now}.")
@@ -189,7 +189,7 @@ class EndNode(NetworkNode):
                 self.sack_packet_received = environment.event()
             else:
                 # env.timeout(self.round_end_time - env.now)
-                yield env.timeout(max(0, self.round_end_time - env.now))
+                yield env.timeout(self.round_end_time - env.now)
 
             if self.round_start_time < env.now:
                 log(env, f"[SACK-MISSED] {self}: missed sack packet")
