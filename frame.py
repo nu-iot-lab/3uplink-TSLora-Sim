@@ -62,7 +62,7 @@ class Frame:
                 start_time_prev = env.now + self.data_slot_len * (i - 1) + df_prev + self.guard_time
                 end_time_prev = env.now + self.data_slot_len * i - self.guard_time + df_prev
 
-                if start_time_n < end_time_prev and start_time_prev < end_time_n:
+                if start_time_n <= end_time_prev and start_time_prev <= end_time_n:
                     nr_data_collisions += 1
 
     def __update_fields(self):
