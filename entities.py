@@ -181,17 +181,18 @@ class EndNode(NetworkNode):
         global nr_sack_missed_count
         while True:
             # calculating round start time
-            yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
+            # yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
             if self.waiting_first_sack:
                 yield self.sack_packet_received
+                # print(f"Node {self.node_id} received its first SACK packet at simulation time {env.now}.")
                 self.waiting_first_sack = False
                 self.sack_packet_received = environment.event()
             else:
-                env.timeout(self.round_end_time - env.now)
+                # env.timeout(self.round_end_time - env.now)
+                yield env.timeout(max(0, self.round_end_time - env.now))
 
             if self.round_start_time < env.now:
                 log(env, f"[SACK-MISSED] {self}: missed sack packet")
-                # print(f"round_start_time: {self.round_start_time} env.now: {env.now} diff: {self.round_start_time - env.now}")
                 self.round_start_time = env.now + 1
                 self.missed_sack_count += 1
                 nr_sack_missed_count += 1
@@ -204,7 +205,7 @@ class EndNode(NetworkNode):
             #     # self.connected = False
             #     data_gateway.frame(self.sf).remove(self)
             #     continue
-
+            # print(f"Node {self.node_id} waiting {max(0, self.round_start_time - env.now)} until next transmission opportunity.")
             yield env.timeout(self.round_start_time - env.now)
 
             # calculating round_end_time and waiting till send_time
