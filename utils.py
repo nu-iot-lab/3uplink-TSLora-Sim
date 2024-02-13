@@ -29,9 +29,9 @@ def power_collision(p1, p2):  #
         return p1, p2
     elif p1_rssi - p2_rssi < power_threshold:
         # p2 overpowered p1, return p1 as casualty
-        return p1,
+        return (p1,)
     # p2 was the weaker packet, return it as a casualty
-    return p2,
+    return (p2,)
 
 
 def timing_collision(p1, p2):
@@ -42,7 +42,7 @@ def timing_collision(p1, p2):
     # assuming 8 preamble symbols
 
     # we can lose at most (Npream - 5) * Tsym of our preamble
-    Tpreamb = 2 ** p1.sf / (1.0 * p1.bw) * (npream - 5)
+    Tpreamb = 2**p1.sf / (1.0 * p1.bw) * (npream - 5)
 
     # check whether p2 ends in p1's critical section
     p2_end = p2.add_time + p2.rec_time
@@ -62,29 +62,16 @@ def log(env, str):
 
 
 def show_final_statistics():
-    avr_join = 0
-    if nr_joins > 0:
-        avr_join = total_join_time * 0.001 / nr_joins
     global nr_data_retransmissions
     nr_data_retransmissions = nr_sack_missed_count + nr_lost + nr_data_collisions
 
-    # print("Join Request Collisions:", nr_collisions)
     print("Data collisions:", nr_data_collisions)
     print("Lost packets (due to path loss):", nr_lost)
     print("Transmitted data packets:", nr_data_packets_sent)
-    # for n in nodes:
-    #	print("\tNode", n.node_id, "sent", n.packets_sent_count, "packets")
     print("Transmitted SACK packets:", nr_sack_sent)
     print("Missed SACK packets:", nr_sack_missed_count)
-    # print("Transmitted join request packets:", nr_join_req_sent)
-    # print("Transmitted join accept packets:", nr_join_acp_sent)
-    # print("Join Request Retransmissions:", nr_retransmission)
     print("Data Retransmissions:", nr_data_retransmissions)
-    # print("Join request packets dropped by gateway:", nr_join_req_dropped)
-    # print(f"Average join time: {avr_join:.3f} s")
     print(f"Average energy consumption (Rx): {(erx / nodes_count):.3f} J")
     print(f"Average energy consumption (Tx): {(etx / nodes_count):.3f} J")
     print(f"Average energy consumption per node: {total_energy / nodes_count:.3f} J")
     # print(f"PRR: {(nr_data_packets_sent - nr_data_retransmissions) / nr_data_packets_sent:.3f}")
-    # print(f"Number of nodes failed to connect to the network:",
-    #       nodes_count - nr_joins if nodes_count - nr_joins >= 0 else 0)

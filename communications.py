@@ -11,10 +11,9 @@ from singleton import ArgumentSingleton
 class Packet:
     def __init__(self, node=None, receiver=None):
         from entities import NetworkNode
+
         self.node = NetworkNode() if node is None else node
         self.receiver = None if receiver is None else receiver
-        # self.node = node
-        # self.receiver = receiver
 
         self.cr = coding_rate
         self.bw, self.sf, self.pl, self.rec_time = 0, 0, 0, 0
@@ -34,13 +33,19 @@ class Packet:
         return 0
 
     def dist(self, destination):
-        return np.sqrt((self.node.x - destination.x) * (self.node.x - destination.x) + (self.node.y - destination.y) * (
-                self.node.y - destination.y))
+        return np.sqrt(
+            (self.node.x - destination.x) * (self.node.x - destination.x)
+            + (self.node.y - destination.y) * (self.node.y - destination.y)
+        )
 
     def rssi(self, destination):
         # xs = variance * random.gauss(0, 0.01)
         # + np.random.normal(-variance, variance)
-        Lpl = Lpld0 + 10 * gamma * math.log10(self.dist(destination) / d0) + np.random.normal(-variance, variance)
+        Lpl = (
+            Lpld0
+            + 10 * gamma * math.log10(self.dist(destination) / d0)
+            + np.random.normal(-variance, variance)
+        )
         Prx = Ptx - GL - Lpl
         return Prx  # threshold is 12 dB
 
@@ -61,11 +66,16 @@ class Packet:
         if self.sf == 6:
             H = 1  # can only have implicit header with SF6
 
-        Tsym = (2.0 ** self.sf) / self.bw
+        Tsym = (2.0**self.sf) / self.bw
         Tpream = (Npream + 4.25) * Tsym
         payloadSymbNB = 8 + max(
-            math.ceil((8.0 * self.pl - 4.0 * self.sf + 28 + 16 - 20 * H) / (4.0 * (self.sf - 2 * DE))) * (self.cr + 4),
-            0)
+            math.ceil(
+                (8.0 * self.pl - 4.0 * self.sf + 28 + 16 - 20 * H)
+                / (4.0 * (self.sf - 2 * DE))
+            )
+            * (self.cr + 4),
+            0,
+        )
         Tpayload = payloadSymbNB * Tsym
         return Tpream + Tpayload
 
@@ -100,7 +110,7 @@ class Packet:
         global etx
         erx += self.energy_receive()
         etx += self.energy_transmit()
-        total_energy += (self.energy_transmit() + self.energy_receive())
+        total_energy += self.energy_transmit() + self.energy_receive()
 
     def is_received(self):
         return not self.collided and self.processed and not self.lost
@@ -111,7 +121,9 @@ class Packet:
     def check_collision(self):
         self.processed = True
         if BroadcastTraffic.nr_data_packets > max_packets:
-            log(env, "[PACKET-OVERFLOW] too many packets are being sent to the gateway:")
+            log(
+                env, "[PACKET-OVERFLOW] too many packets are being sent to the gateway:"
+            )
             self.processed = False
 
         if BroadcastTraffic.nr_packets:
@@ -119,18 +131,26 @@ class Packet:
                 if self.node is other.node:
                     continue
 
-                if self.node.is_gateway() != other.node.is_gateway() and self.sf == other.sf:
+                if (
+                    self.node.is_gateway() != other.node.is_gateway()
+                    and self.sf == other.sf
+                ):
                     if self.processed and self.was_sent_to(other.node):
                         log(env, f"[PACKET-DROP] {self} from {self.node} is dropped")
                         self.processed = False
 
                     if other.processed and other.was_sent_to(self.node):
-                        log(env, f"[PACKET-DROP-OTHER] {other} from {other.node} is dropped")
+                        log(
+                            env,
+                            f"[PACKET-DROP-OTHER] {other} from {other.node} is dropped",
+                        )
                         other.processed = False
 
-                if frequency_collision(self, other) and \
-                        sf_collision(self, other) and \
-                        timing_collision(self, other):
+                if (
+                    frequency_collision(self, other)
+                    and sf_collision(self, other)
+                    and timing_collision(self, other)
+                ):
                     for p in power_collision(self, other):
                         p.collided = True
                         if p == self:
@@ -177,8 +197,6 @@ class SackPacket(Packet):
         super().update_statistics()
         if self.sent:
             global nr_sack_sent
-
-    # nr_sack_sent += 1
 
     def was_sent_to(self, node):
         return self.sf == node.sf
