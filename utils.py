@@ -1,5 +1,5 @@
 from singleton import EnvironmentSingleton, ArgumentSingleton
-from consts import *
+import consts
 
 env = EnvironmentSingleton.get_instance()
 args = ArgumentSingleton.get_instance()
@@ -21,13 +21,13 @@ def sf_collision(p1, p2):
     return p1.sf == p2.sf
 
 
-def power_collision(p1, p2):  #
+def power_collision(p1, p2):
     p1_rssi, p2_rssi = p1.rssi(p2.node), p2.rssi(p1.node)
-    if abs(p1_rssi - p2_rssi) < power_threshold:
+    if abs(p1_rssi - p2_rssi) < consts.power_threshold:
         # packets are too close to each other, both collide
         # return both packets as casualties
         return p1, p2
-    elif p1_rssi - p2_rssi < power_threshold:
+    elif p1_rssi - p2_rssi < consts.power_threshold:
         # p2 overpowered p1, return p1 as casualty
         return (p1,)
     # p2 was the weaker packet, return it as a casualty
@@ -42,7 +42,7 @@ def timing_collision(p1, p2):
     # assuming 8 preamble symbols
 
     # we can lose at most (Npream - 5) * Tsym of our preamble
-    Tpreamb = 2**p1.sf / (1.0 * p1.bw) * (npream - 5)
+    Tpreamb = 2**p1.sf / (1.0 * p1.bw) * (consts.npream - 5)
 
     # check whether p2 ends in p1's critical section
     p2_end = p2.add_time + p2.rec_time
@@ -54,7 +54,7 @@ def timing_collision(p1, p2):
 
 
 def get_sensitivity(sf, bw):
-    return sensitivities[sf - 7, [125, 250, 500].index(bw) + 1]
+    return consts.sensitivities[sf - 7, [125, 250, 500].index(bw) + 1]
 
 
 def log(env, str):
@@ -62,16 +62,22 @@ def log(env, str):
 
 
 def show_final_statistics():
-    global nr_data_retransmissions
-    nr_data_retransmissions = nr_sack_missed_count + nr_lost + nr_data_collisions
+    consts.nr_data_retransmissions = (
+        consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions
+    )
 
-    print("Data collisions:", nr_data_collisions)
-    print("Lost packets (due to path loss):", nr_lost)
-    print("Transmitted data packets:", nr_data_packets_sent)
-    print("Transmitted SACK packets:", nr_sack_sent)
-    print("Missed SACK packets:", nr_sack_missed_count)
-    print("Data Retransmissions:", nr_data_retransmissions)
-    print(f"Average energy consumption (Rx): {(erx / nodes_count):.3f} J")
-    print(f"Average energy consumption (Tx): {(etx / nodes_count):.3f} J")
-    print(f"Average energy consumption per node: {total_energy / nodes_count:.3f} J")
-    # print(f"PRR: {(nr_data_packets_sent - nr_data_retransmissions) / nr_data_packets_sent:.3f}")
+    print("\n!--STATISTICS--!\n")
+    print("Data collisions:", consts.nr_data_collisions)
+    print("Lost packets (due to path loss):", consts.nr_lost)
+    print("Transmitted data packets:", consts.nr_data_packets_sent)
+    print("Transmitted SACK packets:", consts.nr_sack_sent)
+    print("Missed SACK packets:", consts.nr_sack_missed_count)
+    print("Data Retransmissions:", consts.nr_data_retransmissions)
+    print(f"Average energy consumption (Rx): {(consts.erx / nodes_count):.3f} J")
+    print(f"Average energy consumption (Tx): {(consts.etx / nodes_count):.3f} J")
+    print(
+        f"Average energy consumption per node: {consts.total_energy / nodes_count:.3f} J"
+    )
+    print(
+        f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}"
+    )

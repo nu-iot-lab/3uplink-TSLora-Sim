@@ -3,14 +3,13 @@ from random import gauss, uniform
 from communications import DataPacket, SackPacket
 from singleton import EnvironmentSingleton
 
-from consts import nodes
+import consts
 
 env = EnvironmentSingleton.get_instance()
 
 
 class Frame:
     def __init__(self, sf):
-        global nodes
         self.sf = sf
         self.data_p_rec_time = DataPacket(sf).rec_time
         self.min_frame_length = (
@@ -39,14 +38,12 @@ class Frame:
         self.slots = [None for _ in range(self.nr_slots)]
 
     def assign_slots(self):
-        global nodes
         slots = [None for _ in range(self.nr_slots)]
-        for node in nodes:
+        for node in consts.nodes:
             self.add(node)
         return slots
 
     def check_data_collision(self):
-        global nr_data_collisions
         drifting_times = {}
         for i in range(1, self.nr_taken_slots):
             if self.slots[i] is not None and self.slots[i - 1] is not None:
@@ -73,7 +70,7 @@ class Frame:
                 )
 
                 if start_time_n <= end_time_prev and start_time_prev <= end_time_n:
-                    nr_data_collisions += 1
+                    consts.nr_data_collisions += 1
 
     def __update_fields(self):
         # self.sack_p_rec_time = SackPacket(self.nr_slots, self.sf)
