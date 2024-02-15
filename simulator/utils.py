@@ -1,5 +1,5 @@
-from singleton import EnvironmentSingleton, ArgumentSingleton
-import consts
+from simulator.singleton import EnvironmentSingleton, ArgumentSingleton
+import simulator.consts as consts
 
 env = EnvironmentSingleton.get_instance()
 args = ArgumentSingleton.get_instance()

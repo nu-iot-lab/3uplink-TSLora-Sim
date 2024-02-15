@@ -1,10 +1,10 @@
 import sys
 import gym
 
-from lora_simulator import LoraSimulator
-from singleton import EnvironmentSingleton
+from simulator.lora_simulator import LoraSimulator
+from simulator.singleton import EnvironmentSingleton
 
-from utils import show_final_statistics
+from simulator.utils import show_final_statistics
 
 # simpy environment
 env = EnvironmentSingleton.get_instance()

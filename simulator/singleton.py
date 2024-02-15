@@ -43,5 +43,5 @@ class DataGatewaySingleton:
         return DataGatewaySingleton._instance
 
     def __init__(self, data_id=-1):
-        from entities import DataGateway
+        from simulator.entities import DataGateway
         self.data_gateway = DataGateway(data_id)

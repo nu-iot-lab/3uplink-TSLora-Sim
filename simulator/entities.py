@@ -1,11 +1,11 @@
-import consts
+import simulator.consts as consts
 import numpy as np
-from singleton import EnvironmentSingleton, DataGatewaySingleton, ArgumentSingleton
+from simulator.singleton import EnvironmentSingleton, DataGatewaySingleton, ArgumentSingleton
 import random, math
-from utils import *
-from communications import DataPacket
-from broadcast_traffic import BroadcastTraffic
-from frame import Frame
+from simulator.utils import *
+from simulator.communications import DataPacket
+from simulator.broadcast_traffic import BroadcastTraffic
+from simulator.frame import Frame
 
 environment = EnvironmentSingleton.get_instance()
 args = ArgumentSingleton.get_instance()
@@ -42,7 +42,7 @@ class DataGateway(Gateway):
         raise ValueError("sf must be greater than 6")
 
     def transmit_sack(self, env, sf):
-        from communications import SackPacket
+        from simulator.communications import SackPacket
 
         # main sack packet transmission loop
         while True:
@@ -71,8 +71,8 @@ class DataGateway(Gateway):
             self.frame(sf).next_frame()
 
     def transmit_sack_to_node(self, env, node, sf):
-        from communications import SackPacket
-        from singleton import DataGatewaySingleton
+        from simulator.communications import SackPacket
+        from simulator.singleton import DataGatewaySingleton
 
         data_gateway = DataGatewaySingleton.get_instance().data_gateway
         sack_packet = SackPacket(self.frame(sf).nr_slots_SACK, sf, self)

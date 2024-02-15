@@ -6,7 +6,7 @@ class BroadcastTraffic:
 
     @classmethod
     def __inc_count(cls, packet):
-        from communications import DataPacket, SackPacket
+        from simulator.communications import DataPacket, SackPacket
 
         cls.nr_packets += 1
         if isinstance(packet, DataPacket):
@@ -16,7 +16,7 @@ class BroadcastTraffic:
 
     @classmethod
     def __dec_count(cls, packet):
-        from communications import DataPacket, SackPacket
+        from simulator.communications import DataPacket, SackPacket
 
         cls.nr_packets -= 1
         if isinstance(packet, DataPacket):
@@ -39,7 +39,7 @@ class BroadcastTraffic:
 
     @classmethod
     def is_p_cls_broadcasting(cls, packet_class):
-        from communications import DataPacket, SackPacket
+        from simulator.communications import DataPacket, SackPacket
 
         if packet_class == DataPacket:
             return cls.nr_data_packets > 0

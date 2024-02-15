@@ -1,6 +1,6 @@
-import consts
-from entities import EndNode
-from singleton import EnvironmentSingleton, DataGatewaySingleton
+import simulator.consts as consts
+from simulator.entities import EndNode
+from simulator.singleton import EnvironmentSingleton, DataGatewaySingleton
 
 
 env = EnvironmentSingleton.get_instance()

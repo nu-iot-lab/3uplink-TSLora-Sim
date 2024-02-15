@@ -1,17 +1,17 @@
 # from entities import NetworkNode
-from broadcast_traffic import BroadcastTraffic
-from utils import *
-import consts
+from simulator.broadcast_traffic import BroadcastTraffic
+from simulator.utils import *
+import simulator.consts as consts
 import numpy as np
 import math
 import random
-from channels import Channels
-from singleton import ArgumentSingleton
+from simulator.channels import Channels
+from simulator.singleton import ArgumentSingleton
 
 
 class Packet:
     def __init__(self, node=None, receiver=None):
-        from entities import NetworkNode
+        from simulator.entities import NetworkNode
 
         self.node = NetworkNode() if node is None else node
         self.receiver = None if receiver is None else receiver

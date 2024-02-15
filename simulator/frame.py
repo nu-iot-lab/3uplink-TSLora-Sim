@@ -1,9 +1,9 @@
 from random import gauss, uniform
 
-from communications import DataPacket, SackPacket
-from singleton import EnvironmentSingleton
+from simulator.communications import DataPacket, SackPacket
+from simulator.singleton import EnvironmentSingleton
 
-import consts
+import simulator.consts as consts
 
 env = EnvironmentSingleton.get_instance()
 
