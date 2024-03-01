@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 
 # Arrays of measured sensitivfity values
 sf7 = np.array([7, -123.0, -120.0, -117.0])
@@ -73,3 +74,5 @@ bsx = max_dist + 10
 bsy = max_dist + 10
 x_max = bsx + max_dist + 10
 y_max = bsy + max_dist + 10
+
+retransmissions_per_node_map = defaultdict(int)

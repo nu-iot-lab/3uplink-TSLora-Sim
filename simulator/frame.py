@@ -49,7 +49,7 @@ class Frame:
             if self.slots[i] is not None and self.slots[i - 1] is not None:
                 # generate drifting time for the current slot if it hasn't been generated before
                 if i not in drifting_times:
-                    drifting_times[i] = gauss(0, 0.5)
+                    drifting_times[i] = gauss(0, 1.0)
 
                 df = drifting_times[i]
                 start_time_n = env.now + self.data_slot_len * i + df + self.guard_time
@@ -59,7 +59,7 @@ class Frame:
 
                 # generate drifting time for the previous slot if it hasn't been generated before
                 if i - 1 not in drifting_times:
-                    drifting_times[i - 1] = gauss(0, 0.5)
+                    drifting_times[i - 1] = gauss(0, 1.0)
 
                 df_prev = drifting_times[i - 1]
                 start_time_prev = (
@@ -71,6 +71,8 @@ class Frame:
 
                 if start_time_n <= end_time_prev and start_time_prev <= end_time_n:
                     consts.nr_data_collisions += 1
+                    # consts.retransmissions_per_node_map[self.slots[i].node.node_id] += 1
+                    
 
     def __update_fields(self):
         # self.sack_p_rec_time = SackPacket(self.nr_slots, self.sf)
