@@ -176,8 +176,8 @@ class DataPacket(Packet):
         if self.sent:
             consts.nr_data_packets_sent += 1
 
-        if self.sent and self.node is not None:
-            self.node.packets_sent_count += 1
+        # if self.sent and self.node is not None:
+        #     self.node.packets_sent_count += 1
 
     def __str__(self):
         return "data packet"

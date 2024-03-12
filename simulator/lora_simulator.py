@@ -19,6 +19,16 @@ class LoraSimulator:
         for i in range(self.nodes_count):
             consts.nodes.append(EndNode(i, data_gateway))
 
+    def update_nodes_and_calculate_rewards(self):
+        for node in consts.nodes:
+            if isinstance(node, EndNode):
+                # Update PRR for each node
+                node.prr_value = node.calculate_prr()
+                reward = self.calculate_reward(node.prr_value, node.rssi_value, node.sf_value)
+                print(f"Node {node.node_id}: PRR={node.prr_value}, RSS={node.rssi_value}, SF={node.sf_value}, Reward={reward}")
+
+
+    
     def start_simulation(self):
         print("\n!--START--!\n")
         # initialize slots inside the frame
@@ -32,7 +42,9 @@ class LoraSimulator:
             env.process(data_gateway.transmit_sack(env, sf))
 
         env.run(until=self.sim_time)
+        self.update_nodes_and_calculate_rewards()
         print("\n!--END--!\n")
+
 
     def __str__(self):
         return (

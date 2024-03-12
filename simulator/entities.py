@@ -108,9 +108,19 @@ class EndNode(NetworkNode):
     def __init__(self, node_id, gateway=None):
         super().__init__(node_id)
         self.data_gateway = DataGatewaySingleton.get_instance().data_gateway
-        self.join_retry_count = 0
         self.missed_sack_count = 0
         self.packets_sent_count = 0
+        self.packets_received_count = 0 
+
+        self.prr_value = 0
+        self.rssi_value = 0
+        self.sf_value = 0
+
+        self.state = [self.prr_value, self.rssi_value, self.sf_value]
+
+        #  consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions = consts.nr_data_retransmissions
+        self.nr_lost = 0
+        self.nr_data_collisions = 0
 
         self.connected = True  # for now
         self.accept_received = False
@@ -134,6 +144,7 @@ class EndNode(NetworkNode):
             (self.x - consts.bsx) * (self.x - consts.bsx)
             + (self.y - consts.bsy) * (self.y - consts.bsy)
         )
+
 
         self.sf = self.find_optimal_sf()
         print(
@@ -191,6 +202,37 @@ class EndNode(NetworkNode):
                 return sf
         print(f"WARNING: {self} cannot reach gateway!")
         return None
+    
+    def calculate_prr(self):
+            # if self.packets_sent_count > 0:
+            #     return self.packets_received_count / self.packets_sent_count
+            # else:
+            #     return 0
+            nr_retransmissions = consts.retransmissions_per_node_map[self.node_id] + self.nr_data_collisions + self.nr_lost
+            if self.packets_sent_count == 0:
+                return 0
+            return (self.packets_sent_count - nr_retransmissions) / (self.packets_sent_count)
+
+            
+    def update_state(self):
+        """Updates the node's state based on current PRR, RSSI, and SF."""
+        self.state = [self.calculate_prr(), self.rssi_value, self.sf]
+
+    def select_action_based_on_state(self):
+        """Determines the number of retransmissions based on the node's state."""
+        # Placeholder for your DQL model's action prediction
+        # This example uses a simplistic rule-based approach for illustration
+        if self.state[0] > 0.98 and self.state[1] > -120:  # High PRR and good RSSI
+            return 0  # Fewer retransmissions needed
+        elif self.state[2] <= 7:  # Low SF, indicating closer proximity
+            return 1  # Possibly fewer retransmissions
+        else:
+            return 2  # Default or more retransmissions for lower PRR or worse RSSI
+
+    def perform_action(self, action):
+        """Executes the chosen action."""
+        # Adjust the node's behavior based on the selected action, e.g., adjust retransmission strategy
+        self.max_retransmissions = action
 
     def transmit(self, env):
         while True:
@@ -234,21 +276,36 @@ class EndNode(NetworkNode):
                 send_time = send_time + random.gauss(0, consts.sigma) * self.guard_time
             yield env.timeout(send_time)
 
+
+            self.update_state()
+            action = self.select_action_based_on_state()
+            self.perform_action(action)
+
             data_packet = DataPacket(self.sf, self)
             data_packet.add_time = env.now
             data_packet.sent = True
+            self.packets_sent_count += 1 
+
+            prr_value = self.calculate_prr()
+            rssi_value = data_packet.rssi(self.data_gateway)
+            sf_value = data_packet.sf
             # [NODE-SEND-PACKET] -- node {self.node_id} sent data packet
-            log(
-                env,
-                f'{f"[NODE-SEND-PACKET-{self.node_id}]":<40}'
-                f'{f"SF: {data_packet.sf} ":<10}'
-                f'{f"Data size: {data_packet.pl} b ":<20}'
-                f'{f"RSSI: {data_packet.rssi(self.data_gateway):.3f} dBm ":<25}'
-                f'{f"Freq: {data_packet.freq / 1000000.0:.3f} MHZ ":<24}'
-                f'{f"BW: {data_packet.bw}  kHz ":<18}'
-                f'{f"Airtime: {data_packet.rec_time / 1000.0:.3f} s ":<22}'
-                f'{f"Guardtime: {self.guard_time / 1000.0:.3f} ms"}',
-            )
+
+            # values for logging
+            node_send_packet = f"[NODE-SEND-PACKET-{self.node_id}]"
+            data_size = f"Data size: {data_packet.pl} b"
+            freq = f"Freq: {data_packet.freq / 1000000.0:.3f} MHZ"
+            bw = f"BW: {data_packet.bw} kHz"
+            airtime = f"Airtime: {data_packet.rec_time / 1000.0:.3f} s"
+            guardtime = f"Guardtime: {self.guard_time / 1000.0:.3f} ms"
+            rssi = f"RSSI: {rssi_value:.3f} dBm"
+            prr = f"PRR: {prr_value:.3f}"
+            sf = f"SF: {sf_value}"
+
+            # logging the message
+            log_message = f"{node_send_packet:<40}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
+            log(env, log_message)
+
 
             if data_packet.rssi(self.data_gateway) < get_sensitivity(
                 data_packet.sf, data_packet.bw
@@ -256,7 +313,13 @@ class EndNode(NetworkNode):
                 log(env, f"[NODE-LOST] {self}: packet will be lost")
                 data_packet.lost = True
 
+            if not data_packet.lost and data_packet.rssi(self.data_gateway) >= get_sensitivity(data_packet.sf, data_packet.bw):
+                # Packet is considered successfully received if not lost and RSSI is above sensitivity
+                self.packets_received_count += 1 
+
+
             data_packet.check_collision()
             yield BroadcastTraffic.add_and_wait(env, data_packet)
             data_packet.update_statistics()
             data_packet.reset()
+            

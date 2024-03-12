@@ -81,3 +81,5 @@ def show_final_statistics():
     print(
         f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}"
     )
+
+    print(consts.retransmissions_per_node_map)
