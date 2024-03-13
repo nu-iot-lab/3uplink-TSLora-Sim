@@ -62,14 +62,23 @@ def log(env, str):
 
 
 def show_final_statistics():
-    consts.nr_data_retransmissions = (
-        consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions
-    )
+    consts.nr_data_retransmissions = (consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions)
+
+    consts.nr_received_data_packets = 0
+
+    sum = 0
+    for n in consts.nodes: 
+        consts.nr_received_data_packets += n.packets_received_count
+        n.calculate_prr()
+        print(f"Node prr: {n.node_id} - {n.prr_value:.3f}")
+        sum += n.prr_value
+    print(f"PRR average: {(sum / nodes_count):.3f}")
 
     print("\n!--STATISTICS--!\n")
     print("Data collisions:", consts.nr_data_collisions)
     print("Lost packets (due to path loss):", consts.nr_lost)
     print("Transmitted data packets:", consts.nr_data_packets_sent)
+    print("Received data packets:", consts.nr_received_data_packets)
     print("Transmitted SACK packets:", consts.nr_sack_sent)
     print("Missed SACK packets:", consts.nr_sack_missed_count)
     print("Data Retransmissions:", consts.nr_data_retransmissions)
@@ -78,8 +87,5 @@ def show_final_statistics():
     print(
         f"Average energy consumption per node: {consts.total_energy / nodes_count:.3f} J"
     )
-    print(
-        f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}"
-    )
-
-    print(consts.retransmissions_per_node_map)
+    print(f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}")
+    print(f"PRR: {(consts.nr_received_data_packets / consts.nr_data_packets_sent):.3f}")

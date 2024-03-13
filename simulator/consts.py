@@ -36,6 +36,7 @@ std_dev = 0.0001  # Standard deviation of the normal distribution
 nr_collisions = 0
 nr_data_collisions = 0
 nr_received = 0
+nr_received_data_packets = 0
 nr_processed = 0
 nr_lost = 0
 nr_packets_sent = 0
@@ -75,4 +76,3 @@ bsy = max_dist + 10
 x_max = bsx + max_dist + 10
 y_max = bsy + max_dist + 10
 
-retransmissions_per_node_map = defaultdict(int)

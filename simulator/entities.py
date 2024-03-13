@@ -204,14 +204,10 @@ class EndNode(NetworkNode):
         return None
     
     def calculate_prr(self):
-            # if self.packets_sent_count > 0:
-            #     return self.packets_received_count / self.packets_sent_count
-            # else:
-            #     return 0
-            nr_retransmissions = consts.retransmissions_per_node_map[self.node_id] + self.nr_data_collisions + self.nr_lost
-            if self.packets_sent_count == 0:
-                return 0
-            return (self.packets_sent_count - nr_retransmissions) / (self.packets_sent_count)
+        if self.packets_sent_count > 0:
+            return self.packets_received_count / self.packets_sent_count
+        else:
+            return 0
 
             
     def update_state(self):
@@ -284,7 +280,13 @@ class EndNode(NetworkNode):
             data_packet = DataPacket(self.sf, self)
             data_packet.add_time = env.now
             data_packet.sent = True
-            self.packets_sent_count += 1 
+
+            if (data_packet.sent): 
+                self.packets_sent_count += 1 
+
+            if not data_packet.lost and data_packet.rssi(self.data_gateway) >= get_sensitivity(data_packet.sf, data_packet.bw):
+                # Packet is considered successfully received if not lost and RSSI is above sensitivity
+                self.packets_received_count += 1 
 
             prr_value = self.calculate_prr()
             rssi_value = data_packet.rssi(self.data_gateway)
@@ -313,9 +315,6 @@ class EndNode(NetworkNode):
                 log(env, f"[NODE-LOST] {self}: packet will be lost")
                 data_packet.lost = True
 
-            if not data_packet.lost and data_packet.rssi(self.data_gateway) >= get_sensitivity(data_packet.sf, data_packet.bw):
-                # Packet is considered successfully received if not lost and RSSI is above sensitivity
-                self.packets_received_count += 1 
 
 
             data_packet.check_collision()

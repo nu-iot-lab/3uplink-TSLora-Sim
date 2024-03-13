@@ -1,76 +1,73 @@
-import gymnasium as gym
+import gym
+from gym import spaces
 import numpy as np
-
-from lora_simulator import LoraSimulator
 
 
 class LoRaEnv(gym.Env):
-    metadata = {'render_modes': ['console']}
+    """Custom Environment for Time-Slotted 3-uplink LoRa network simulation that follows gym interface"""
+    metadata = {'render.modes': ['console']}
 
     def __init__(self, num_agents, data_size, avg_wake_up_time, sim_time):
         super(LoRaEnv, self).__init__()
-
-        LoraSimulator(nodes_count=num_agents, data_size=data_size, avg_wake_up_time=avg_wake_up_time, sim_time=sim_time)
         
         self.num_agents = num_agents
         self.data_size = data_size
         self.avg_wake_up_time = avg_wake_up_time
         self.sim_time = sim_time
-        # self.sf = sf  # Spreading factor, affects the effectiveness of retransmissions
-        self.lambda_value = 0.1  # Weight for penalizing retransmissions
-        self.sf = 7
         
-        # Observation space (RSSI, PRR)
-        self.observation_space = gym.spaces.Box(low=np.array([-120, 0]), high=np.array([0, 1]), dtype=np.float64)
+        # Action space is now choosing between 1 to 3 retransmissions
+        self.action_space = spaces.Discrete(3)  # 0 for 1 retransmission, 1 for 2, 2 for 3
         
-        # Action space is choosing the number of retransmissions (1 to 3)
-        self.action_space = gym.spaces.Discrete(3)  # 0: 1 retransmission, 1: 2 retransmissions, 2: 3 retransmissions
+        # Observation space: [distance/SF, power, success rate]
+        # Note: Adjust the distance range according to your network's scale
+        self.observation_space = spaces.Box(low=np.array([0, 0, 0]), high=np.array([10, 1, 1]), dtype=np.float32)
         
+        # Initialize state
         self.state = None
-        self.total_prr = 0  # Keep track of the total PRR
-        self.total_retransmissions = 0  # Keep track of the total number of retransmissions
+        self.reset()
+
+    def reset(self):
+        """Resets the state of the environment and returns an initial observation."""
+        # Randomly initialize each agent's state
+        self.state = np.random.uniform(low=self.observation_space.low, high=self.observation_space.high)
+        return self.state
 
     def step(self, action):
-        # Simplified model for state update
-        sf_effect = 1 - (self.sf - 7) / 6
-        rssi_change = np.random.uniform(-5, 5)
-        prr_bonus = (action + 1) * 0.1 * sf_effect  # Effectiveness of retransmissions scaled by SF
+        """Executes a step in the environment."""
+        distance, _, success_rate = self.state
         
-        new_rssi = self.state[0] + rssi_change
-        new_prr = min(self.state[1] + prr_bonus, 1)  # Ensure PRR doesn't exceed 1
+        # Convert action to actual number of retransmissions
+        retransmissions = action + 1  # Action is 0, 1, or 2; retransmissions is 1, 2, or 3
         
-        self.state = np.array([new_rssi, new_prr])
-        self.total_prr += new_prr  # Update total PRR
-        self.total_retransmissions += (action + 1)  # Update total retransmissions (action + 1 because actions are 0-indexed)
+        # Update success rate based on distance and retransmissions
+        # Closer nodes with fewer retransmissions may have a similar success rate to farther nodes with more
+        if distance < 3:  # Assuming distance is scaled such that 3 represents close proximity
+            success_rate += 0.05 * retransmissions
+        else:
+            success_rate += 0.03 * retransmissions
+        
+        success_rate = min(success_rate, 1.0)  # Cap the success rate at 1
+        
+        # Reward: Higher for higher success rates, adjusted for number of retransmissions
+        reward = success_rate - 0.1 * retransmissions
+        
+        # Update the state with new success rate
+        self.state[2] = success_rate
+        
+        # Simulate time passing in the simulation
+        self.sim_time -= 1
+        
+        # Check if simulation is done
+        done = self.sim_time <= 0
+        
+        return self.state, reward, done, {}
 
-        # Reward calculation
-        reward = self.total_prr - self.lambda_value * self.total_retransmissions
-        
-        terminated = False  # This could be more complex based on your simulation needs
-        truncated = False
-        info = {'total_prr': self.total_prr, 'total_retransmissions': self.total_retransmissions}
-        
-        return self.state, reward, terminated, truncated, info
-    
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+    def render(self, mode='console'):
+        """Renders the environment."""
+        if mode != 'console':
+            raise NotImplementedError()
+        print(f"State: {self.state}, Time left: {self.sim_time}")
 
-        # Reset the environment state and tracking variables
-        initial_rssi = np.random.uniform(-120, 0)
-        initial_prr = np.random.uniform(0, 1)
-        
-        self.state = np.array([initial_rssi, initial_prr])
-        self.total_prr = 0
-        self.total_retransmissions = 0
-
-        return self.state, {}
-    
-    def render(self, mode='human'):
-        # Print the current state
-        print(f"State: RSSI={self.state[0]:.2f} dBm, PRR={self.state[1]:.2f}, SF={self.sf}")
-
-# Example of creating and testing the environment with a specific penalty coefficient
-# env = LoRaEnv(sf=7, )
-env = LoRaEnv(num_agents=10, data_size=100, avg_wake_up_time=5, sim_time=100)
-initial_state = env.reset()
-# print(f"Initial State: RSSI={initial_state[0]:.2f} dBm, PRR={initial_state[1]:.2f}")
+    def close(self):
+        """Perform any necessary cleanup."""
+        pass
