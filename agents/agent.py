@@ -1,6 +1,6 @@
 import numpy as np
 
-from envs.environment import LoRaEnv
+from loraenv.loraenv.envs.environment import LoRaEnv
 
 class QLearningAgent:
     def __init__(self, state_size, action_size, learning_rate=0.1, discount_rate=0.95, exploration_rate=1.0, exploration_decay=0.99, exploration_min=0.01):

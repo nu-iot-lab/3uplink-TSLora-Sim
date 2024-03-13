@@ -1,5 +1,6 @@
 import sys
-import gym
+import gymnasium as gym 
+import loraenv
 
 from simulator.lora_simulator import LoraSimulator
 from simulator.singleton import EnvironmentSingleton
@@ -8,6 +9,9 @@ from simulator.utils import show_final_statistics
 
 # simpy environment
 env = EnvironmentSingleton.get_instance()
+
+# gym environment
+gym_env = gym.make('loraenv/LoRa-v0') 
 
 if __name__ == '__main__':
     if len(sys.argv) == 5:
@@ -28,6 +32,8 @@ if __name__ == '__main__':
         simulator.start_simulation()
 
         show_final_statistics()
+        print(gym_env.action_space.sample())
+
     else:
         print("usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>")
         exit(-1)

@@ -42,7 +42,6 @@ class LoraSimulator:
             env.process(data_gateway.transmit_sack(env, sf))
 
         env.run(until=self.sim_time)
-        self.update_nodes_and_calculate_rewards()
         print("\n!--END--!\n")
 
 

@@ -71,7 +71,6 @@ class Frame:
 
                 if start_time_n <= end_time_prev and start_time_prev <= end_time_n:
                     consts.nr_data_collisions += 1
-                    # consts.retransmissions_per_node_map[self.slots[i].node.node_id] += 1
                     
 
     def __update_fields(self):
