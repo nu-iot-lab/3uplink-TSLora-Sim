@@ -7,6 +7,11 @@ from simulator.singleton import EnvironmentSingleton
 
 from simulator.utils import show_final_statistics
 
+from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines.deepq.policies import MlpPolicy
+from stable_baselines import DQN
+
+
 # simpy environment
 env = EnvironmentSingleton.get_instance()
 
@@ -32,7 +37,8 @@ if __name__ == '__main__':
         simulator.start_simulation()
 
         show_final_statistics()
-        print(gym_env.action_space.sample())
+        
+
 
     else:
         print("usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>")

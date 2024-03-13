@@ -1,6 +1,6 @@
 import gymnasium as gym
 import numpy as np
-
+from simulator.consts import nodes
 from simulator.lora_simulator import LoraSimulator
 
 
@@ -12,7 +12,11 @@ class LoRaEnv(gym.Env):
 
         # self.sf = sf  # Spreading factor, affects the effectiveness of retransmissions
         self.lambda_value = 0.1  # Weight for penalizing retransmissions
-        self.sf = 7
+
+        for node in nodes:
+            self.state = node.state
+
+        # self.sf = 7
 
         # Observation space (RSSI, PRR)
         self.observation_space = gym.spaces.Box(
@@ -24,26 +28,25 @@ class LoRaEnv(gym.Env):
             3
         )  # 0: 1 retransmission, 1: 2 retransmissions, 2: 3 retransmissions
 
-        self.state = None
+        # self.state = None
         self.total_prr = 0  # Keep track of the total PRR
-        self.total_retransmissions = (
-            0  # Keep track of the total number of retransmissions
-        )   
+        self.total_retransmissions = 0
 
     def step(self, action):
         # Simplified model for state update
-        sf_effect = 1 - (self.sf - 7) / 6
+        sf = self.state[2]
+        sf_effect = 1 - (self.state[2] - 7) / 6
         rssi_change = np.random.uniform(-5, 5)
         prr_bonus = (
             (action + 1) * 0.1 * sf_effect
         )  # Effectiveness of retransmissions scaled by SF
 
-        new_rssi = self.state[0] + rssi_change
-        nodeId.new_prr = min(
-            self.state[1] + prr_bonus, 1
+        new_rssi = self.state[1] + rssi_change
+        new_prr = min(
+            self.state[0] + prr_bonus, 1
         )  # Ensure PRR doesn't exceed 1
 
-        self.state = np.array([new_rssi, new_prr])
+        self.state = np.array([new_prr, new_rssi, sf])
         self.total_prr += new_prr  # Update total PRR
         self.total_retransmissions += (
             action + 1
@@ -77,9 +80,8 @@ class LoRaEnv(gym.Env):
     def render(self, mode="human"):
         # Print the current state
         print(
-            f"State: RSSI={self.state[0]:.2f} dBm, PRR={self.state[1]:.2f}, SF={self.sf}"
+            f"State: RSSI={self.state[1]:.2f} dBm, PRR={self.state[0]:.2f}, SF={self.state[2]}"
         )
-
 
 # Example of creating and testing the environment with a specific penalty coefficient
 # env = LoRaEnv(sf=7, )
