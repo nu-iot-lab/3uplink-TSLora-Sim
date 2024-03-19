@@ -1,90 +1,106 @@
 import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
+import simpy
 from simulator.consts import nodes
 from simulator.lora_simulator import LoraSimulator
 
 
 class LoRaEnv(gym.Env):
+    """
+        Custom Environment for LoRa Network Simulation integrated with Reinforcement Learning.
+        Follows the gym interface.
+    """
+
     metadata = {"render_modes": ["console"]}
 
     def __init__(self):
         super(LoRaEnv, self).__init__()
 
-        # self.sf = sf  # Spreading factor, affects the effectiveness of retransmissions
-        self.lambda_value = 0.1  # Weight for penalizing retransmissions
+        self.lambda_value = 0.01  # Weight for penalizing retransmissions
 
-        for node in nodes:
-            self.state = node.state
+        # Actions: number of transmission slots (1, 2, 3)
+        self.action_space = spaces.Discrete(3)
 
-        # self.sf = 7
+        self.nodes_count = 10
+        self.data_size = 16
+        self.avg_wake_up_time = 30
+        self.sim_time = 3600
 
-        # Observation space (RSSI, PRR)
-        self.observation_space = gym.spaces.Box(
-            low=np.array([-120, 0]), high=np.array([0, 1]), dtype=np.float64
-        )
+        self.observation_space = spaces.Dict({
+            'prr': spaces.Box(low=0, high=1, shape=(self.nodes_count,), dtype=np.float32),
+            'rssi': spaces.Box(low=-200, high=0, shape=(self.nodes_count,), dtype=np.float32),
+            'sf': spaces.Box(low=7, high=12, shape=(10,), dtype=np.int32)
+        })
 
-        # Action space is choosing the number of retransmissions (1 to 3)
-        self.action_space = gym.spaces.Discrete(
-            3
-        )  # 0: 1 retransmission, 1: 2 retransmissions, 2: 3 retransmissions
+        self.simpy_env = None
+        self.simulator = None
+        self.current_step = 0 
+        self.done = False
 
-        # self.state = None
-        self.total_prr = 0  # Keep track of the total PRR
-        self.total_retransmissions = 0
+    def _next_observation(self):
+        prr = np.array([node.calculate_prr() for node in nodes])
+        rssi = np.array([node.rssi_value for node in nodes])
+        sf = np.array([node.sf for node in nodes])
+        print(prr, rssi, sf)
+
+        return {'prr': prr, 'rssi': rssi, 'sf': sf}
+
 
     def step(self, action):
-        # Simplified model for state update
-        sf = self.state[2]
-        sf_effect = 1 - (self.state[2] - 7) / 6
-        rssi_change = np.random.uniform(-5, 5)
-        prr_bonus = (
-            (action + 1) * 0.1 * sf_effect
-        )  # Effectiveness of retransmissions scaled by SF
+        if self.current_step >= self.sim_time:
+            self.done = True
+            reward = self._calculate_reward()
+            obs = self._next_observation()
+            return obs, reward, self.done, {}
 
-        new_rssi = self.state[1] + rssi_change
-        new_prr = min(
-            self.state[0] + prr_bonus, 1
-        )  # Ensure PRR doesn't exceed 1
+        self.simulator.update_nodes_behavior(action)
 
-        self.state = np.array([new_prr, new_rssi, sf])
-        self.total_prr += new_prr  # Update total PRR
-        self.total_retransmissions += (
-            action + 1
-        )  # Update total retransmissions (action + 1 because actions are 0-indexed)
+        # Advance the simulation by one second
+        self.current_step += 1
 
-        # Reward calculation
-        reward = self.total_prr - self.lambda_value * self.total_retransmissions
+        # self.simulator.start_simulation(self.current_step)
 
-        terminated = False  # This could be more complex based on our simulation needs
-        truncated = False
-        info = {
-            "total_prr": self.total_prr,
-            "total_retransmissions": self.total_retransmissions,
-        }
+        reward = self._calculate_reward()
+        obs = self._next_observation()
+        
+        # Check if the entire simulation duration has been reached
+        self.done = self.current_step >= self.sim_time
 
-        return self.state, reward, terminated, truncated, info
+        return obs, reward, self.done, False, {}
+    
+
+
+    def _calculate_reward(self):
+        return 1 
+
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
-
-        # Reset the environment state and tracking variables
-        initial_rssi = np.random.uniform(-120, 0)
-        initial_prr = np.random.uniform(0, 1)
-
-        self.state = np.array([initial_rssi, initial_prr])
-        self.total_prr = 0
-        self.total_retransmissions = 0
-
-        return self.state, {}
+        self.simpy_env = simpy.Environment()
+        self.current_step = 0 
+        self.done = False 
+        self.simulator = LoraSimulator(
+            self.nodes_count, self.data_size, self.avg_wake_up_time, self.sim_time, self.simpy_env
+        )
+        self.simulator.add_nodes()
+        # self.simulator.start_simulation(); 
+        return self._next_observation(), {}
 
     def render(self, mode="human"):
-        # Print the current state
-        print(
-            f"State: RSSI={self.state[1]:.2f} dBm, PRR={self.state[0]:.2f}, SF={self.state[2]}"
-        )
+        print(self._next_observation())
 
 # Example of creating and testing the environment with a specific penalty coefficient
 # env = LoRaEnv(sf=7, )
 # env = LoRaEnv(num_agents=10, data_size=100, avg_wake_up_time=5, sim_time=100)
 # initial_state = env.reset()
 # print(f"Initial State: RSSI={initial_state[0]:.2f} dBm, PRR={initial_state[1]:.2f}")
+
+# env = LoRaEnv()
+# for _ in range(10):
+#     obs = env.reset()
+#     while True:
+#         action=np.array([7])
+#         obs, r, done, _ = env.step(action, 0)
+#         print(obs)
+#         if done:
+#             break

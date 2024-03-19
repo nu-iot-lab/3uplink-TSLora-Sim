@@ -70,8 +70,8 @@ def show_final_statistics():
     for n in consts.nodes: 
         consts.nr_received_data_packets += n.packets_received_count
         n.calculate_prr()
-        print(f"Node prr: {n.node_id} - {n.prr_value:.3f}")
-        sum += n.prr_value
+        print(f"Node prr: {n.node_id} - {n.calculate_prr():.3f}")
+        sum += n.calculate_prr()
     print(f"PRR average: {(sum / nodes_count):.3f}")
 
     print("\n!--STATISTICS--!\n")
@@ -87,5 +87,5 @@ def show_final_statistics():
     print(
         f"Average energy consumption per node: {consts.total_energy / nodes_count:.3f} J"
     )
-    print(f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}")
+    # print(f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}")
     print(f"PRR: {(consts.nr_received_data_packets / consts.nr_data_packets_sent):.3f}")

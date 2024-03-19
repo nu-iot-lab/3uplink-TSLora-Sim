@@ -7,10 +7,6 @@ from simulator.singleton import EnvironmentSingleton
 
 from simulator.utils import show_final_statistics
 
-from stable_baselines.common.vec_env import DummyVecEnv
-from stable_baselines.deepq.policies import MlpPolicy
-from stable_baselines import DQN
-
 
 # simpy environment
 env = EnvironmentSingleton.get_instance()
@@ -25,21 +21,36 @@ if __name__ == '__main__':
         avg_wake_up_time = int(sys.argv[3])
         sim_time = int(sys.argv[4])
 
+        nodes_count = 10 
+        data_size = 16
+        avg_wake_up_time = 30
+        sim_time = 3600
 
         avg_wake_up_time *= 1000
         sim_time *= 1000
 
+        # while True: 
+        #     action = gym_env.action_space.sample()
+        #     state, reward, done, terminated, info = gym_env.step(action)
+        #     if done:
+        #         break
+
+        #     gym_env.render()
+        
+
+
         simulator = LoraSimulator(nodes_count=nodes_count, data_size=data_size, avg_wake_up_time=avg_wake_up_time,
-                              sim_time=sim_time)
+                              sim_time=sim_time, env=env)
 
         simulator.add_nodes()
 
         simulator.start_simulation()
 
         show_final_statistics()
+
+        state = gym_env.reset()
+        print(state)
         
-
-
     else:
         print("usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>")
         exit(-1)
