@@ -8,8 +8,8 @@ from simulator.lora_simulator import LoraSimulator
 
 class LoRaEnv(gym.Env):
     """
-        Custom Environment for LoRa Network Simulation integrated with Reinforcement Learning.
-        Follows the gym interface.
+    Custom Environment for LoRa Network Simulation integrated with Reinforcement Learning.
+    Follows the gym interface.
     """
 
     metadata = {"render_modes": ["console"]}
@@ -27,25 +27,32 @@ class LoRaEnv(gym.Env):
         self.avg_wake_up_time = 30
         self.sim_time = 3600
 
-        self.observation_space = spaces.Dict({
-            'prr': spaces.Box(low=0, high=1, shape=(self.nodes_count,), dtype=np.float32),
-            'rssi': spaces.Box(low=-200, high=0, shape=(self.nodes_count,), dtype=np.float32),
-            'sf': spaces.Box(low=7, high=12, shape=(10,), dtype=np.int32)
-        })
+        self.observation_space = spaces.Dict(
+            {
+                "prr": spaces.Box(
+                    low=0, high=1, shape=(self.nodes_count,), dtype=np.float64
+                ),
+                "rssi": spaces.Box(
+                    low=-200, high=0, shape=(self.nodes_count,), dtype=np.int64
+                ),
+                "sf": spaces.Box(
+                    low=7, high=12, shape=(self.nodes_count,), dtype=np.int64
+                ),
+            }
+        )
 
         self.simpy_env = None
         self.simulator = None
-        self.current_step = 0 
+        self.current_step = 0
         self.done = False
+        self.truncated = False
 
     def _next_observation(self):
         prr = np.array([node.calculate_prr() for node in nodes])
         rssi = np.array([node.rssi_value for node in nodes])
         sf = np.array([node.sf for node in nodes])
-        print(prr, rssi, sf)
-
-        return {'prr': prr, 'rssi': rssi, 'sf': sf}
-
+        print(f"Next Observation:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n")
+        return {"prr": prr, "rssi": rssi, "sf": sf}
 
     def step(self, action):
         if self.current_step >= self.sim_time:
@@ -63,31 +70,34 @@ class LoRaEnv(gym.Env):
 
         reward = self._calculate_reward()
         obs = self._next_observation()
-        
+        info = {}
         # Check if the entire simulation duration has been reached
         self.done = self.current_step >= self.sim_time
 
-        return obs, reward, self.done, False, {}
-    
-
+        return obs, reward, self.done, self.truncated, info
 
     def _calculate_reward(self):
-        return 1 
-
+        return 1
 
     def reset(self, seed=None, options=None):
         self.simpy_env = simpy.Environment()
-        self.current_step = 0 
-        self.done = False 
+        self.current_step = 0
+        self.done = False
         self.simulator = LoraSimulator(
-            self.nodes_count, self.data_size, self.avg_wake_up_time, self.sim_time, self.simpy_env
+            self.nodes_count,
+            self.data_size,
+            self.avg_wake_up_time,
+            self.sim_time,
+            self.simpy_env,
         )
         self.simulator.add_nodes()
-        # self.simulator.start_simulation(); 
-        return self._next_observation(), {}
+        self.simulator.start_simulation()
+        info = {}
+        return self._next_observation(), info
 
     def render(self, mode="human"):
         print(self._next_observation())
+
 
 # Example of creating and testing the environment with a specific penalty coefficient
 # env = LoRaEnv(sf=7, )

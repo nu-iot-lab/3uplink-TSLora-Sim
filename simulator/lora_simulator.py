@@ -13,19 +13,17 @@ class LoraSimulator:
         self.data_size = data_size
         self.avg_wake_up_time = avg_wake_up_time
         self.sim_time = sim_time
-        self.env = env 
+        self.env = env
 
     def add_nodes(self):
         print("\n!--NODES--!\n")
         for i in range(self.nodes_count):
             consts.nodes.append(EndNode(i, data_gateway))
 
-    
     def update_nodes_behavior(self, action):
         for node in consts.nodes:
             node.perform_action(action)
 
-    
     def start_simulation(self):
         print("\n!--START--!\n")
         # initialize slots inside the frame
@@ -40,7 +38,6 @@ class LoraSimulator:
 
         self.env.run(until=self.sim_time)
         print("\n!--END--!\n")
-
 
     def __str__(self):
         return (

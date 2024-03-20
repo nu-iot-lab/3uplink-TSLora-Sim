@@ -1,6 +1,10 @@
 import simulator.consts as consts
 import numpy as np
-from simulator.singleton import EnvironmentSingleton, DataGatewaySingleton, ArgumentSingleton
+from simulator.singleton import (
+    EnvironmentSingleton,
+    DataGatewaySingleton,
+    ArgumentSingleton,
+)
 import random, math
 from simulator.utils import *
 from simulator.communications import DataPacket
@@ -110,7 +114,7 @@ class EndNode(NetworkNode):
         self.data_gateway = DataGatewaySingleton.get_instance().data_gateway
         self.missed_sack_count = 0
         self.packets_sent_count = 0
-        self.packets_received_count = 0 
+        self.packets_received_count = 0
 
         self.prr_value = 0
         self.rssi_value = 0
@@ -146,7 +150,6 @@ class EndNode(NetworkNode):
             (self.x - consts.bsx) * (self.x - consts.bsx)
             + (self.y - consts.bsy) * (self.y - consts.bsy)
         )
-
 
         self.sf = self.find_optimal_sf()
         print(
@@ -204,14 +207,13 @@ class EndNode(NetworkNode):
                 return sf
         print(f"WARNING: {self} cannot reach gateway!")
         return None
-    
+
     def calculate_prr(self):
         if self.packets_sent_count > 0:
             return self.packets_received_count / self.packets_sent_count
         else:
             return 0
 
-            
     def update_state(self):
         """Updates the node's state based on current PRR, RSSI, and SF."""
         self.state = [self.calculate_prr(), self.rssi_value, self.sf]
@@ -219,15 +221,15 @@ class EndNode(NetworkNode):
     def select_action_based_on_state(self):
         """Determines the number of retransmissions based on the node's state."""
         if self.prr_value > 0.95 and self.rssi_value > -120:
-            return 0  
+            return 0
         elif self.sf_value <= 7:
-            return 1 
+            return 1
         else:
             return 2
 
     def perform_action(self, action):
         """
-            Adjusts the node's behavior based on the selected action.
+        Adjusts the node's behavior based on the selected action.
         """
         # mapping actions to transmission attemts
         if action == 0:
@@ -241,10 +243,9 @@ class EndNode(NetworkNode):
 
     # def get_state()
 
-
     def transmit(self, env):
         """
-            Adjusted transmit function to accommodate the action chosen by the RL agent.
+        Adjusted transmit function to accommodate the action chosen by the RL agent.
         """
         while True:
             # calculating round start time
@@ -266,37 +267,36 @@ class EndNode(NetworkNode):
 
             yield env.timeout(self.round_start_time - env.now)
 
-            # Now incorporating transmission attempts based on the action chosen by the RL agent
-            for attempt in range(self.transmission_attempts): 
-                self._attempt_transmission(env)
-
             # calculating round_end_time and waiting till send_time
             self.round_end_time = env.now + self.frame_length
             send_time = (self.slot[0] + self.counter_index) * (
                 DataPacket(self.sf).rec_time + 2 * self.guard_time
             ) + self.guard_time
             self.counter_index += 1
-            if self.counter_index == 2:
-                self.counter_index = 0
             if self.slot[0] != 0:
                 send_time = send_time + random.gauss(0, consts.sigma) * self.guard_time
             yield env.timeout(send_time)
 
-
             self.update_state()
-            action = self.select_action_based_on_state()
-            self.perform_action(action)
+
+            if self.counter_index > self.transmission_attempts:
+                continue
+
+            if self.counter_index == 3:
+                self.counter_index = 0
 
             data_packet = DataPacket(self.sf, self)
             data_packet.add_time = env.now
             data_packet.sent = True
 
-            # if (data_packet.sent): 
-            self.packets_sent_count += 1 
+            # if (data_packet.sent):
+            self.packets_sent_count += 1
 
-            if not data_packet.lost and data_packet.rssi(self.data_gateway) >= get_sensitivity(data_packet.sf, data_packet.bw):
+            if not data_packet.lost and data_packet.rssi(
+                self.data_gateway
+            ) >= get_sensitivity(data_packet.sf, data_packet.bw):
                 # Packet is considered successfully received if not lost and RSSI is above sensitivity
-                self.packets_received_count += 1 
+                self.packets_received_count += 1
 
             prr_value = self.calculate_prr()
             rssi_value = data_packet.rssi(self.data_gateway)
@@ -318,21 +318,13 @@ class EndNode(NetworkNode):
             log_message = f"{node_send_packet:<40}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
             log(env, log_message)
 
-
             if data_packet.rssi(self.data_gateway) < get_sensitivity(
                 data_packet.sf, data_packet.bw
             ):
                 log(env, f"[NODE-LOST] {self}: packet will be lost")
                 data_packet.lost = True
 
-
             data_packet.check_collision()
             yield BroadcastTraffic.add_and_wait(env, data_packet)
             data_packet.update_statistics()
             data_packet.reset()
-            
-    def _attempt_transmission(self, env):
-        """
-            Handles the logic for a single transmission attempt.
-        """
-
