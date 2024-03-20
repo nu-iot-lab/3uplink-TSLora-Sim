@@ -149,7 +149,7 @@ class Packet:
                 if (
                     frequency_collision(self, other)
                     and sf_collision(self, other)
-                    and timing_collision(self, other)
+                    and timing_collision(self, other, env)
                 ):
                     for p in power_collision(self, other):
                         p.collided = True

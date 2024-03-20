@@ -1,6 +1,7 @@
 import numpy as np
 from collections import defaultdict
 
+# CONSTANTS
 # Arrays of measured sensitivfity values
 sf7 = np.array([7, -123.0, -120.0, -117.0])
 sf8 = np.array([8, -126.0, -123.0, -120.0])
@@ -32,25 +33,6 @@ drifting_range = [-0.2, 0.2]
 mean = 0  # Mean of the normal distribution
 std_dev = 0.0001  # Standard deviation of the normal distribution
 
-# Statistics
-nr_collisions = 0
-nr_data_collisions = 0
-nr_received = 0
-nr_received_data_packets = 0
-nr_processed = 0
-nr_lost = 0
-nr_packets_sent = 0
-nr_data_packets_sent = 0
-nr_retransmission = 0
-nr_data_retransmissions = 0
-nr_sack_sent = 0
-nr_sack_missed_count = 0
-
-total_energy = 0
-
-erx = 0
-etx = 0
-
 Ptx = 14
 gamma = 2.08
 d0 = 40.0
@@ -76,3 +58,20 @@ bsy = max_dist + 10
 x_max = bsx + max_dist + 10
 y_max = bsy + max_dist + 10
 
+# VARIABLES
+# Statistics (should be reset before each simulation)
+nr_collisions = 0
+nr_data_collisions = 0
+nr_received = 0
+nr_received_data_packets = 0
+nr_processed = 0
+nr_lost = 0
+nr_packets_sent = 0
+nr_data_packets_sent = 0
+nr_retransmission = 0
+nr_data_retransmissions = 0
+nr_sack_sent = 0
+nr_sack_missed_count = 0
+total_energy = 0
+erx = 0
+etx = 0

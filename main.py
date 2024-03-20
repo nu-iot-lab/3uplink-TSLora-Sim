@@ -3,15 +3,9 @@ import gymnasium as gym
 import loraenv
 
 from simulator.lora_simulator import LoraSimulator
-from simulator.singleton import EnvironmentSingleton
-
 from simulator.utils import show_final_statistics
 
-
-# simpy environment
-env = EnvironmentSingleton.get_instance()
-
-# gym environment
+# Gymnasium environment
 gym_env = gym.make("loraenv/LoRa-v0")
 
 if __name__ == "__main__":
@@ -21,28 +15,28 @@ if __name__ == "__main__":
         avg_wake_up_time = int(sys.argv[3]) * 1000
         sim_time = int(sys.argv[4]) * 1000
 
-        # while True:
-        #     action = gym_env.action_space.sample()
-        #     state, reward, done, terminated, info = gym_env.step(action)
-        #     if done:
-        #         break
+        state = gym_env.reset()
+        print(f"Current state of the enrivonment: ", state)
+
+        while True:
+            action = gym_env.action_space.sample()
+            state, reward, done, terminated, info = gym_env.step(action)
+            if done:
+                break
 
         #     gym_env.render()
 
-        simulator = LoraSimulator(
-            nodes_count=nodes_count,
-            data_size=data_size,
-            avg_wake_up_time=avg_wake_up_time,
-            sim_time=sim_time,
-            env=env,
-        )
+        # simulator = LoraSimulator(
+        #     nodes_count=nodes_count,
+        #     data_size=data_size,
+        #     avg_wake_up_time=avg_wake_up_time,
+        #     sim_time=sim_time,
+        #     env=env,
+        # )
 
-        simulator.add_nodes()
-        simulator.start_simulation()
-        show_final_statistics()
-
-        state = gym_env.reset()
-        print(f"Current state of the enrivonment: ", state)
+        # simulator.add_nodes()
+        # simulator.start_simulation()
+        # show_final_statistics()
 
     else:
         print(

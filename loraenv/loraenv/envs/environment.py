@@ -2,8 +2,9 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import simpy
-from simulator.consts import nodes
 from simulator.lora_simulator import LoraSimulator
+import simulator.consts as consts
+import simulator.utils as utils
 
 
 class LoRaEnv(gym.Env):
@@ -24,8 +25,8 @@ class LoRaEnv(gym.Env):
 
         self.nodes_count = 10
         self.data_size = 16
-        self.avg_wake_up_time = 30
-        self.sim_time = 3600
+        self.avg_wake_up_time = 30 * 1000
+        self.sim_time = 3600 * 1000
 
         self.observation_space = spaces.Dict(
             {
@@ -36,7 +37,7 @@ class LoRaEnv(gym.Env):
                     low=-200, high=0, shape=(self.nodes_count,), dtype=np.int64
                 ),
                 "sf": spaces.Box(
-                    low=7, high=12, shape=(self.nodes_count,), dtype=np.int64
+                    low=7, high=9, shape=(self.nodes_count,), dtype=np.int64
                 ),
             }
         )
@@ -48,14 +49,14 @@ class LoRaEnv(gym.Env):
         self.truncated = False
 
     def _next_observation(self):
-        prr = np.array([node.calculate_prr() for node in nodes])
-        rssi = np.array([node.rssi_value for node in nodes])
-        sf = np.array([node.sf for node in nodes])
+        prr = np.array([node.calculate_prr() for node in consts.nodes])
+        rssi = np.array([node.rssi_value for node in consts.nodes])
+        sf = np.array([node.sf for node in consts.nodes])
         print(f"Next Observation:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n")
         return {"prr": prr, "rssi": rssi, "sf": sf}
 
     def step(self, action):
-        if self.current_step >= self.sim_time:
+        if self.current_step >= (self.sim_time / 1000):
             self.done = True
             reward = self._calculate_reward()
             obs = self._next_observation()
@@ -72,7 +73,7 @@ class LoRaEnv(gym.Env):
         obs = self._next_observation()
         info = {}
         # Check if the entire simulation duration has been reached
-        self.done = self.current_step >= self.sim_time
+        self.done = self.current_step >= (self.sim_time / 1000)
 
         return obs, reward, self.done, self.truncated, info
 
@@ -90,8 +91,10 @@ class LoRaEnv(gym.Env):
             self.sim_time,
             self.simpy_env,
         )
+        utils.reset_statistics()
         self.simulator.add_nodes()
         self.simulator.start_simulation()
+        utils.show_final_statistics()
         info = {}
         return self._next_observation(), info
 

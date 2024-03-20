@@ -1,7 +1,6 @@
-from simulator.singleton import EnvironmentSingleton, ArgumentSingleton
+from simulator.singleton import ArgumentSingleton
 import simulator.consts as consts
 
-env = EnvironmentSingleton.get_instance()
 args = ArgumentSingleton.get_instance()
 nodes_count = args.nodes_count
 
@@ -34,7 +33,7 @@ def power_collision(p1, p2):
     return (p2,)
 
 
-def timing_collision(p1, p2):
+def timing_collision(p1, p2, env):
     # assuming p1 is the freshly arrived packet and this is the last check
     # we've already determined that p1 is a weak packet, so the only
     # way we can win is by being late enough (only the first n - 5 preamble symbols overlap)
@@ -61,13 +60,34 @@ def log(env, str):
     print(f'{f"{env.now / 1000:.3f} s":<12} {str}')
 
 
+def reset_statistics():
+    consts.nodes = []
+    consts.nr_collisions = 0
+    consts.nr_data_collisions = 0
+    consts.nr_received = 0
+    consts.nr_received_data_packets = 0
+    consts.nr_processed = 0
+    consts.nr_lost = 0
+    consts.nr_packets_sent = 0
+    consts.nr_data_packets_sent = 0
+    consts.nr_retransmission = 0
+    consts.nr_data_retransmissions = 0
+    consts.nr_sack_sent = 0
+    consts.nr_sack_missed_count = 0
+    consts.total_energy = 0
+    consts.erx = 0
+    consts.etx = 0
+
+
 def show_final_statistics():
-    consts.nr_data_retransmissions = (consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions)
+    consts.nr_data_retransmissions = (
+        consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions
+    )
 
     consts.nr_received_data_packets = 0
 
     sum = 0
-    for n in consts.nodes: 
+    for n in consts.nodes:
         consts.nr_received_data_packets += n.packets_received_count
         n.calculate_prr()
         print(f"Node prr: {n.node_id} - {n.calculate_prr():.3f}")

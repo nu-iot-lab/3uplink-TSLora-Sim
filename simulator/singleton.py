@@ -2,16 +2,6 @@ import sys
 import simpy
 
 
-class EnvironmentSingleton:
-    _instance = None
-
-    @staticmethod
-    def get_instance():
-        if EnvironmentSingleton._instance is None:
-            EnvironmentSingleton._instance = simpy.Environment()
-        return EnvironmentSingleton._instance
-
-
 class ArgumentSingleton:
     _instance = None
 
@@ -29,7 +19,9 @@ class ArgumentSingleton:
             self.sim_time = int(sys.argv[4])
 
         else:
-            print("usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>")
+            print(
+                "usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
+            )
             exit(-1)
 
 
@@ -44,4 +36,5 @@ class DataGatewaySingleton:
 
     def __init__(self, data_id=-1):
         from simulator.entities import DataGateway
+
         self.data_gateway = DataGateway(data_id)

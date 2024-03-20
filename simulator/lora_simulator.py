@@ -1,9 +1,8 @@
 import simulator.consts as consts
+
 from simulator.entities import EndNode
-from simulator.singleton import EnvironmentSingleton, DataGatewaySingleton
+from simulator.singleton import DataGatewaySingleton
 
-
-env = EnvironmentSingleton.get_instance()
 data_gateway = DataGatewaySingleton.get_instance().data_gateway
 
 
@@ -18,7 +17,7 @@ class LoraSimulator:
     def add_nodes(self):
         print("\n!--NODES--!\n")
         for i in range(self.nodes_count):
-            consts.nodes.append(EndNode(i, data_gateway))
+            consts.nodes.append(EndNode(i, self.env, data_gateway))
 
     def update_nodes_behavior(self, action):
         for node in consts.nodes:

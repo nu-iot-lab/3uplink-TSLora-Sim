@@ -1,7 +1,6 @@
 import simulator.consts as consts
 import numpy as np
 from simulator.singleton import (
-    EnvironmentSingleton,
     DataGatewaySingleton,
     ArgumentSingleton,
 )
@@ -11,7 +10,6 @@ from simulator.communications import DataPacket
 from simulator.broadcast_traffic import BroadcastTraffic
 from simulator.frame import Frame
 
-environment = EnvironmentSingleton.get_instance()
 args = ArgumentSingleton.get_instance()
 
 
@@ -93,7 +91,7 @@ class DataGateway(Gateway):
 
         yield BroadcastTraffic.add_and_wait(env, sack_packet)
         sack_packet.update_statistics()
-        data_gateway.frame(sf).check_data_collision()
+        data_gateway.frame(sf).check_data_collision(env)
 
         if sack_packet.is_received():
             log(env, f"[SACK-RECEIVED] {node} received SACK packet")
@@ -109,7 +107,7 @@ class DataGateway(Gateway):
 
 
 class EndNode(NetworkNode):
-    def __init__(self, node_id, gateway=None):
+    def __init__(self, node_id, env, gateway=None):
         super().__init__(node_id)
         self.data_gateway = DataGatewaySingleton.get_instance().data_gateway
         self.missed_sack_count = 0
@@ -143,7 +141,7 @@ class EndNode(NetworkNode):
         self.network_size = 0
 
         self.req_packet, self.data_packet = None, None
-        self.sack_packet_received = environment.event()
+        self.sack_packet_received = env.event()
 
         self.x, self.y = EndNode.find_place_for_new_node()
         self.dist = np.sqrt(
@@ -218,15 +216,6 @@ class EndNode(NetworkNode):
         """Updates the node's state based on current PRR, RSSI, and SF."""
         self.state = [self.calculate_prr(), self.rssi_value, self.sf]
 
-    def select_action_based_on_state(self):
-        """Determines the number of retransmissions based on the node's state."""
-        if self.prr_value > 0.95 and self.rssi_value > -120:
-            return 0
-        elif self.sf_value <= 7:
-            return 1
-        else:
-            return 2
-
     def perform_action(self, action):
         """
         Adjusts the node's behavior based on the selected action.
@@ -247,13 +236,14 @@ class EndNode(NetworkNode):
         """
         Adjusted transmit function to accommodate the action chosen by the RL agent.
         """
+        print(env)
         while True:
             # calculating round start time
             yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
             if self.waiting_first_sack:
                 yield self.sack_packet_received
                 self.waiting_first_sack = False
-                self.sack_packet_received = environment.event()
+                self.sack_packet_received = env.event()
             else:
                 yield env.timeout(self.round_end_time - env.now)
 
@@ -280,6 +270,8 @@ class EndNode(NetworkNode):
             self.update_state()
 
             if self.counter_index > self.transmission_attempts:
+                if self.counter_index == 3:
+                    self.counter_index = 0
                 continue
 
             if self.counter_index == 3:
