@@ -51,7 +51,6 @@ class DataGateway(Gateway):
             yield env.timeout(self.frame(sf).trans_time - env.now)
             sack_packet = SackPacket(self.frame(sf).nr_slots_SACK, sf, self)
 
-            # print("-" * 70)
             if self.frame(sf).nr_taken_slots != 0:
                 log(
                     env,
@@ -63,7 +62,6 @@ class DataGateway(Gateway):
                     f'{f"BW: {sack_packet.bw}  kHz ":<18}'
                     f'{f"Airtime: {sack_packet.rec_time / 1000.0:.3f} s ":<22}',
                 )
-            # print("-" * 70)
 
             for n in consts.nodes:
                 if n.connected and n.sf == sf:
@@ -118,13 +116,10 @@ class EndNode(NetworkNode):
         self.rssi_value = 0
         self.sf_value = 0
 
-        self.state = [self.calculate_prr(), self.rssi_value, self.sf_value]
-
-        #  consts.nr_sack_missed_count + consts.nr_lost + consts.nr_data_collisions = consts.nr_data_retransmissions
         self.nr_lost = 0
         self.nr_data_collisions = 0
 
-        self.connected = True  # for now
+        self.connected = True
         self.accept_received = False
         self.waiting_first_sack = True
 
@@ -212,31 +207,21 @@ class EndNode(NetworkNode):
         else:
             return 0
 
-    def update_state(self):
-        """Updates the node's state based on current PRR, RSSI, and SF."""
-        self.state = [self.calculate_prr(), self.rssi_value, self.sf]
-
     def perform_action(self, action):
         """
         Adjusts the node's behavior based on the selected action.
         """
         # mapping actions to transmission attemts
-        if action == 0:
-            self.transmission_attempts = 1
-        elif action == 1:
-            self.transmission_attempts = 2
-        elif action == 2:
-            self.transmission_attempts = 3
+        if action <= 2:
+            self.transmission_attempts = action + 1
         else:
             raise ValueError(f"Unknown action: {action}")
-
-    # def get_state()
 
     def transmit(self, env):
         """
         Adjusted transmit function to accommodate the action chosen by the RL agent.
         """
-        print(env)
+        # print(env)
         while True:
             # calculating round start time
             yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
@@ -267,8 +252,6 @@ class EndNode(NetworkNode):
                 send_time = send_time + random.gauss(0, consts.sigma) * self.guard_time
             yield env.timeout(send_time)
 
-            self.update_state()
-
             if self.counter_index > self.transmission_attempts:
                 if self.counter_index == 3:
                     self.counter_index = 0
@@ -281,7 +264,6 @@ class EndNode(NetworkNode):
             data_packet.add_time = env.now
             data_packet.sent = True
 
-            # if (data_packet.sent):
             self.packets_sent_count += 1
 
             if not data_packet.lost and data_packet.rssi(
@@ -293,10 +275,14 @@ class EndNode(NetworkNode):
             prr_value = self.calculate_prr()
             rssi_value = data_packet.rssi(self.data_gateway)
             sf_value = data_packet.sf
+
+            self.rssi_value = rssi_value
+
             # [NODE-SEND-PACKET] -- node {self.node_id} sent data packet
 
             # values for logging
             node_send_packet = f"[NODE-SEND-PACKET-{self.node_id}]"
+            tranmission_number = f"Transmission number: {self.counter_index + 1}"
             data_size = f"Data size: {data_packet.pl} b"
             freq = f"Freq: {data_packet.freq / 1000000.0:.3f} MHZ"
             bw = f"BW: {data_packet.bw} kHz"
@@ -307,7 +293,7 @@ class EndNode(NetworkNode):
             sf = f"SF: {sf_value}"
 
             # logging the message
-            log_message = f"{node_send_packet:<40}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
+            log_message = f"{node_send_packet:<30}{tranmission_number:<30}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
             log(env, log_message)
 
             if data_packet.rssi(self.data_gateway) < get_sensitivity(

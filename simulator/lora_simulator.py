@@ -24,8 +24,7 @@ class LoraSimulator:
             node.perform_action(action)
 
     def start_simulation(self):
-        print("\n!--START--!\n")
-        # initialize slots inside the frame
+        # Initialize slots inside the frame
         for sf in range(7, 10):
             data_gateway.frame(sf).assign_slots()
 
@@ -34,9 +33,6 @@ class LoraSimulator:
 
         for sf in range(7, 10):
             self.env.process(data_gateway.transmit_sack(self.env, sf))
-
-        self.env.run(until=self.sim_time)
-        print("\n!--END--!\n")
 
     def __str__(self):
         return (

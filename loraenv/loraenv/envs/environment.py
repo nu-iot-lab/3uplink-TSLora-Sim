@@ -34,7 +34,7 @@ class LoRaEnv(gym.Env):
                     low=0, high=1, shape=(self.nodes_count,), dtype=np.float64
                 ),
                 "rssi": spaces.Box(
-                    low=-200, high=0, shape=(self.nodes_count,), dtype=np.int64
+                    low=-200, high=0, shape=(self.nodes_count,), dtype=np.float64
                 ),
                 "sf": spaces.Box(
                     low=7, high=9, shape=(self.nodes_count,), dtype=np.int64
@@ -48,30 +48,44 @@ class LoRaEnv(gym.Env):
         self.done = False
         self.truncated = False
 
+    def setup(self, nodes_count, data_size, avg_wake_up_time, sim_time):
+        self.nodes_count = nodes_count
+        self.data_size = data_size
+        self.avg_wake_up_time = avg_wake_up_time
+        self.sim_time = sim_time
+
     def _next_observation(self):
         prr = np.array([node.calculate_prr() for node in consts.nodes])
         rssi = np.array([node.rssi_value for node in consts.nodes])
         sf = np.array([node.sf for node in consts.nodes])
-        print(f"Next Observation:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n")
+        print(
+            f"Next Observation for STEP [{self.current_step}]:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n"
+        )
         return {"prr": prr, "rssi": rssi, "sf": sf}
 
     def step(self, action):
+        if self.current_step == 0:
+            self.simulator.start_simulation()
         if self.current_step >= (self.sim_time / 1000):
             self.done = True
             reward = self._calculate_reward()
             obs = self._next_observation()
-            return obs, reward, self.done, {}
+            info = {}
+            return obs, reward, self.done, info
 
+        # Update number of transmissions
         self.simulator.update_nodes_behavior(action)
 
         # Advance the simulation by one second
         self.current_step += 1
-
-        # self.simulator.start_simulation(self.current_step)
+        timestep = self.current_step * 1000
+        print(f"ACTION TAKEN FOR STEP [{self.current_step}]: {action}")
+        self.simulator.env.run(until=timestep)
 
         reward = self._calculate_reward()
         obs = self._next_observation()
         info = {}
+
         # Check if the entire simulation duration has been reached
         self.done = self.current_step >= (self.sim_time / 1000)
 
@@ -93,27 +107,8 @@ class LoRaEnv(gym.Env):
         )
         utils.reset_statistics()
         self.simulator.add_nodes()
-        self.simulator.start_simulation()
-        utils.show_final_statistics()
         info = {}
         return self._next_observation(), info
 
     def render(self, mode="human"):
         print(self._next_observation())
-
-
-# Example of creating and testing the environment with a specific penalty coefficient
-# env = LoRaEnv(sf=7, )
-# env = LoRaEnv(num_agents=10, data_size=100, avg_wake_up_time=5, sim_time=100)
-# initial_state = env.reset()
-# print(f"Initial State: RSSI={initial_state[0]:.2f} dBm, PRR={initial_state[1]:.2f}")
-
-# env = LoRaEnv()
-# for _ in range(10):
-#     obs = env.reset()
-#     while True:
-#         action=np.array([7])
-#         obs, r, done, _ = env.step(action, 0)
-#         print(obs)
-#         if done:
-#             break
