@@ -126,7 +126,7 @@ class EndNode(NetworkNode):
         self.round_start_time = 0
         self.round_end_time = 0
 
-        self.transmission_attempts = 2
+        self.uplink_attempts = 2
 
         # for triple uplink
         self.slot = [None, None, None]
@@ -213,7 +213,7 @@ class EndNode(NetworkNode):
         """
         # mapping actions to transmission attemts
         if action <= 2:
-            self.transmission_attempts = action + 1
+            self.uplink_attempts = action + 1
         else:
             raise ValueError(f"Unknown action: {action}")
 
@@ -252,7 +252,7 @@ class EndNode(NetworkNode):
                 send_time = send_time + random.gauss(0, consts.sigma) * self.guard_time
             yield env.timeout(send_time)
 
-            if self.counter_index > self.transmission_attempts:
+            if self.counter_index > self.uplink_attempts:
                 if self.counter_index == 3:
                     self.counter_index = 0
                 continue
