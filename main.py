@@ -10,11 +10,6 @@ from stable_baselines3 import DQN
 # Gymnasium environment
 gym_env = gym.make("loraenv/LoRa-v0")
 
-# DQN model
-# model = DQN("MultiInputPolicy", gym_env, verbose=1)
-# model.learn(total_timesteps=10, log_interval=4)
-# model.save("lora_model")
-
 if __name__ == "__main__":
     if len(sys.argv) == 5:
         nodes_count = int(sys.argv[1])
