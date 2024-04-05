@@ -28,11 +28,18 @@ pip install -r requirements.txt
 
 ## Usage
 
-To run the simulation, execute the following command from the 'simulator' directory:
+To run the simulation, execute the following command from the main directory:
 
 ```
-python main.py --nodes_count=10 --data_size=16 --avg_wake_up_time=30 --sim_time=3600
+python main.py --nodes_count=<number_of_nodes> --data_size=<size_of_data_in_bytes> --avg_wake_up_time=<average_wake_up_time_in_seconds> --sim_time=<simulation_time_in_seconds>
 ```
+
+Default parameter values:
+
+-   `--nodes_count=10`: The number of nodes participating in the simulation.
+-   `--data_size=16`: The size of the data to be transmitted, in bytes.
+-   `--avg_wake_up_time=30`: The average delay, in seconds, before nodes wake up from the simulation start to begin transmitting data.
+-   `--sim_time=3600`: The total simulation time, in seconds.
 
 ## Features
 
