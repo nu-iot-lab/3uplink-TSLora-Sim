@@ -22,7 +22,7 @@ iso_thresholds = np.array([IS7, IS8, IS9, IS10, IS11, IS12])
 
 # power consumptions for transmitting, receiving, and operating in mA
 pow_cons = [75, 45, 30]
-V = 3.3  # voltage XXX
+V = 3.3  # voltage
 
 # global
 data_gateway = None

@@ -1,5 +1,5 @@
-# from entities import NetworkNode
 from simulator.broadcast_traffic import BroadcastTraffic
+
 from simulator.utils import *
 import simulator.consts as consts
 import numpy as np
@@ -118,7 +118,7 @@ class Packet:
     def was_sent_to(self, node):
         return self.receiver is node
 
-    def check_collision(self):
+    def check_collision(self, env):
         self.processed = True
         if BroadcastTraffic.nr_data_packets > consts.max_packets:
             log(

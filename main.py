@@ -5,8 +5,15 @@ import loraenv
 from simulator.lora_simulator import LoraSimulator
 from simulator.utils import show_final_statistics
 
+from stable_baselines3 import DQN
+
 # Gymnasium environment
 gym_env = gym.make("loraenv/LoRa-v0")
+
+# DQN model
+# model = DQN("MultiInputPolicy", gym_env, verbose=1)
+# model.learn(total_timesteps=10, log_interval=4)
+# model.save("lora_model")
 
 if __name__ == "__main__":
     if len(sys.argv) == 5:
@@ -22,17 +29,36 @@ if __name__ == "__main__":
             sim_time=sim_time,
         )
 
-        state = gym_env.reset()
-        # print(f"Current state of the enrivonment: ", state)
+        # Training Phase
+        # --------------
+        print("!-- TRAINING START --!")
+        model = DQN("MultiInputPolicy", gym_env, verbose=1)
 
-        print("\n!--START--!\n")
+        # Calculate total timesteps for training
+        episodes = 10
+        total_timesteps = (
+            sim_time / 1000 * episodes
+        )  # Assuming 1 timestep = 1 second in simulation
+        model.learn(total_timesteps=int(total_timesteps), log_interval=4)
+        model.save("lora_model")
+        print("!-- TRAINING END --!")
+
+        # Evaluation Phase
+        # ----------------
+        print("!-- EVALUATION START --!")
+        # Load the trained model (optional if you just trained it)
+        # model = DQN.load("lora_model")
+        obs, info = gym_env.reset()
+
         while True:
-            action = gym_env.action_space.sample()
-            state, reward, done, terminated, info = gym_env.step(action)
-            if done:
-                print("\n!--END--!\n")
+            action, _states = model.predict(obs, deterministic=True)
+            obs, reward, done, terminated, info = gym_env.step(action)
+            if done or terminated:
                 show_final_statistics()
+                obs, info = gym_env.reset()
                 break
+
+        print("!-- EVALUATION END --!")
 
     else:
         print(

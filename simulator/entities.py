@@ -85,7 +85,7 @@ class DataGateway(Gateway):
                 f"[SACK-FAIL] {self} transmit to {node} SACK failed, too much path loss: {sack_packet.rssi(node)}",
             )
 
-        sack_packet.check_collision()
+        sack_packet.check_collision(env)
 
         yield BroadcastTraffic.add_and_wait(env, sack_packet)
         sack_packet.update_statistics()
@@ -126,7 +126,7 @@ class EndNode(NetworkNode):
         self.round_start_time = 0
         self.round_end_time = 0
 
-        self.uplink_attempts = 2
+        self.uplink_attempts = 3
 
         # for triple uplink
         self.slot = [None, None, None]
@@ -135,7 +135,7 @@ class EndNode(NetworkNode):
         self.frame_length = 0
         self.network_size = 0
 
-        self.req_packet, self.data_packet = None, None
+        self.data_packet = None
         self.sack_packet_received = env.event()
 
         self.x, self.y = EndNode.find_place_for_new_node()
@@ -145,13 +145,10 @@ class EndNode(NetworkNode):
         )
 
         self.sf = self.find_optimal_sf()
-        print(
-            f"node {self.node_id}: \t x {self.x:3f} \t y {self.y:3f} \t dist {self.dist:4.3f} \t SF {self.sf}"
-        )
 
     def __str__(self):
         # return "EndNode: " + str(self.node_id) + " x: " + str(self.x) + " y: " + str(self.y) + " sf: " + str(self.sf)
-        return f"EndNode: {self.node_id} sf: {self.sf}"
+        return f"node {self.node_id}: \t x {self.x:3f} \t y {self.y:3f} \t dist {self.dist:4.3f} \t SF {self.sf}"
 
     @staticmethod
     def is_gateway():
@@ -212,17 +209,18 @@ class EndNode(NetworkNode):
         Adjusts the node's behavior based on the selected action.
         """
         # mapping actions to transmission attemts
-        if action <= 2:
-            self.uplink_attempts = action + 1
-        else:
-            raise ValueError(f"Unknown action: {action}")
+        if self.counter_index == 0:
+            if action <= 3:
+                self.uplink_attempts = action
+            else:
+                raise ValueError(f"Unknown action: {action}")
 
     def transmit(self, env):
         """
         Adjusted transmit function to accommodate the action chosen by the RL agent.
         """
-        # print(env)
         while True:
+
             # calculating round start time
             yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
             if self.waiting_first_sack:
@@ -282,7 +280,7 @@ class EndNode(NetworkNode):
 
             # values for logging
             node_send_packet = f"[NODE-SEND-PACKET-{self.node_id}]"
-            tranmission_number = f"Transmission number: {self.counter_index + 1}"
+            uplink_number = f"Uplink number: {self.counter_index + 1}"
             data_size = f"Data size: {data_packet.pl} b"
             freq = f"Freq: {data_packet.freq / 1000000.0:.3f} MHZ"
             bw = f"BW: {data_packet.bw} kHz"
@@ -293,7 +291,7 @@ class EndNode(NetworkNode):
             sf = f"SF: {sf_value}"
 
             # logging the message
-            log_message = f"{node_send_packet:<30}{tranmission_number:<30}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
+            log_message = f"{node_send_packet:<30}{uplink_number:<30}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
             log(env, log_message)
 
             if data_packet.rssi(self.data_gateway) < get_sensitivity(
@@ -302,7 +300,7 @@ class EndNode(NetworkNode):
                 log(env, f"[NODE-LOST] {self}: packet will be lost")
                 data_packet.lost = True
 
-            data_packet.check_collision()
+            data_packet.check_collision(env)
             yield BroadcastTraffic.add_and_wait(env, data_packet)
             data_packet.update_statistics()
             data_packet.reset()

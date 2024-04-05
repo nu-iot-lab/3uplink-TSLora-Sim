@@ -3,6 +3,7 @@ import simulator.consts as consts
 from random import gauss, uniform
 from simulator.communications import DataPacket, SackPacket
 
+
 class Frame:
     def __init__(self, sf):
         self.sf = sf
@@ -37,6 +38,10 @@ class Frame:
         for node in consts.nodes:
             self.add(node)
         return slots
+
+    def reset_frame(self):
+        self.nr_taken_slots = 0
+        self.slots = [None for _ in range(self.nr_slots)]
 
     def check_data_collision(self, env):
         drifting_times = {}

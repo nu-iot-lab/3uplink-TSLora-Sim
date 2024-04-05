@@ -15,7 +15,6 @@ class LoraSimulator:
         self.env = env
 
     def add_nodes(self):
-        print("\n!--NODES--!\n")
         for i in range(self.nodes_count):
             consts.nodes.append(EndNode(i, self.env, data_gateway))
 
@@ -25,7 +24,17 @@ class LoraSimulator:
 
     def start_simulation(self):
         # Initialize slots inside the frame
+        from simulator.frame import Frame
+
+        print("\n!-- NODES --!")
+        for i in range(self.nodes_count):
+            print(consts.nodes[i])
+
+        print("\n!-- FRAME --!")
+
         for sf in range(7, 10):
+            data_gateway.frame(sf).reset_frame()
+            data_gateway.frames[sf - 7] = Frame(sf)
             data_gateway.frame(sf).assign_slots()
 
         for node in consts.nodes:

@@ -1,5 +1,6 @@
-from simulator.singleton import ArgumentSingleton
 import simulator.consts as consts
+
+from simulator.singleton import ArgumentSingleton, DataGatewaySingleton
 
 args = ArgumentSingleton.get_instance()
 nodes_count = args.nodes_count
@@ -60,7 +61,8 @@ def log(env, str):
     print(f'{f"{env.now / 1000:.3f} s":<12} {str}')
 
 
-def reset_statistics():
+def reset_simulator():
+    data_gateway = DataGatewaySingleton.reset()
     consts.nodes = []
     consts.nr_collisions = 0
     consts.nr_data_collisions = 0
@@ -94,7 +96,7 @@ def show_final_statistics():
         sum += n.calculate_prr()
     print(f"PRR average: {(sum / nodes_count):.3f}")
 
-    print("\n!--STATISTICS--!\n")
+    print("\n!-- STATISTICS --!\n")
     print("Data collisions:", consts.nr_data_collisions)
     print("Lost packets (due to path loss):", consts.nr_lost)
     print("Transmitted data packets:", consts.nr_data_packets_sent)
