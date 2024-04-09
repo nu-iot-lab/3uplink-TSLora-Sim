@@ -210,8 +210,8 @@ class EndNode(NetworkNode):
         """
         # mapping actions to transmission attemts
         if self.counter_index == 0:
-            if action <= 3:
-                self.uplink_attempts = action
+            if action <= 2:
+                self.uplink_attempts = action + 1
             else:
                 raise ValueError(f"Unknown action: {action}")
 
@@ -255,9 +255,6 @@ class EndNode(NetworkNode):
                     self.counter_index = 0
                 continue
 
-            if self.counter_index == 3:
-                self.counter_index = 0
-
             data_packet = DataPacket(self.sf, self)
             data_packet.add_time = env.now
             data_packet.sent = True
@@ -280,7 +277,7 @@ class EndNode(NetworkNode):
 
             # values for logging
             node_send_packet = f"[NODE-SEND-PACKET-{self.node_id}]"
-            uplink_number = f"Uplink number: {self.counter_index + 1}"
+            uplink_number = f"Uplink number: {self.counter_index}"
             data_size = f"Data size: {data_packet.pl} b"
             freq = f"Freq: {data_packet.freq / 1000000.0:.3f} MHZ"
             bw = f"BW: {data_packet.bw} kHz"
@@ -304,3 +301,6 @@ class EndNode(NetworkNode):
             yield BroadcastTraffic.add_and_wait(env, data_packet)
             data_packet.update_statistics()
             data_packet.reset()
+
+            if self.counter_index == 3:
+                self.counter_index = 0

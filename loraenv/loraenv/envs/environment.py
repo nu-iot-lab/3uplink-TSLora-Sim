@@ -21,7 +21,7 @@ class LoRaEnv(gym.Env):
         # Weight for penalizing retransmissions
         self.lambda_value = 0.01
 
-        # Actions: number of transmission slots (1, 2, 3)
+        # Actions: number of transmission slots (0 = 1, 1 = 2, 2 = 3)
         self.action_space = spaces.Discrete(3)
 
         # Default values for simulation parameters
