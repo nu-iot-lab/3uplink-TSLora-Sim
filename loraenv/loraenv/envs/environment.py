@@ -66,9 +66,9 @@ class LoRaEnv(gym.Env):
 
     # Update the observation space
     def _next_observation(self):
-        prr = np.array([node.calculate_prr() for node in consts.nodes])
+        prr = np.array([node.prr_value for node in consts.nodes])
         rssi = np.array([node.rssi_value for node in consts.nodes])
-        sf = np.array([node.sf for node in consts.nodes])
+        sf = np.array([node.sf_value for node in consts.nodes])
         # print(
         #     f"Next Observation for STEP [{self.current_step}]:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n"
         # )
@@ -105,12 +105,12 @@ class LoRaEnv(gym.Env):
 
     # Reward formula
     def _calculate_reward(self):
-        prr = np.mean([node.calculate_prr() for node in consts.nodes])
+        mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
         # retransmission_penalty = self.lambda_value * sum(
-        #     [node.retransmissions for node in consts.nodes]
+        #     [node.nr_uplinks for node in consts.nodes]
         # )
         # reward = prr - retransmission_penalty
-        reward = prr
+        reward = mean_prr
         return reward
 
     # Reset the environment

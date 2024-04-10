@@ -88,15 +88,24 @@ def show_final_statistics():
 
     consts.nr_received_data_packets = 0
 
+    print("\n!-- NODE STATISTICS --!\n")
     sum = 0
-    for n in consts.nodes:
-        consts.nr_received_data_packets += n.packets_received_count
-        n.calculate_prr()
-        print(f"Node prr: {n.node_id} - {n.calculate_prr():.3f}")
-        sum += n.calculate_prr()
-    print(f"PRR average: {(sum / nodes_count):.3f}")
+    for node in consts.nodes:
+        consts.nr_received_data_packets += node.packets_received_count
+        node.calculate_prr()
+        sum += node.calculate_prr()
+        print(
+            f"NODE {node.node_id}: "
+            f"PRR - {node.calculate_prr():.3f}, "
+            f"{node.packets_sent_count:3} packets sent, "
+            f"{node.packets_received_count:3} packets received, "
+            f"{node.missed_sack_count:3} SACKs missed, "
+            f"{node.nr_lost:3} packets lost, "
+            f"{node.nr_collisions:3} collisions"
+        )
+    print(f"Average PRR: {(sum / nodes_count):.3f}")
 
-    print("\n!-- STATISTICS --!\n")
+    print("\n!-- TOTAL STATISTICS --!\n")
     print("Data collisions:", consts.nr_data_collisions)
     print("Lost packets (due to path loss):", consts.nr_lost)
     print("Transmitted data packets:", consts.nr_data_packets_sent)
@@ -109,5 +118,9 @@ def show_final_statistics():
     print(
         f"Average energy consumption per node: {consts.total_energy / nodes_count:.3f} J"
     )
-    # print(f"PRR: {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}")
-    print(f"PRR: {(consts.nr_received_data_packets / consts.nr_data_packets_sent):.3f}")
+    print(
+        f"Network PRR (version 1): {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}"
+    )
+    print(
+        f"Network PRR (version 2): {(consts.nr_received_data_packets / consts.nr_data_packets_sent):.3f}"
+    )

@@ -95,6 +95,8 @@ class Packet:
     def update_statistics(self):
         if self.lost:
             consts.nr_lost += 1
+            if not self.node.is_gateway():
+                self.node.nr_lost += 1
 
         if self.collided:
             consts.nr_collisions += 1
@@ -137,6 +139,7 @@ class Packet:
                 ):
                     if self.processed and self.was_sent_to(other.node):
                         log(env, f"[PACKET-DROP] {self} from {self.node} is dropped")
+                        self.node.nr_collisions += 1
                         self.processed = False
 
                     if other.processed and other.was_sent_to(self.node):
@@ -144,6 +147,7 @@ class Packet:
                             env,
                             f"[PACKET-DROP-OTHER] {other} from {other.node} is dropped",
                         )
+                        other.node.nr_collisions += 1
                         other.processed = False
 
                 if (
@@ -175,9 +179,6 @@ class DataPacket(Packet):
         super().update_statistics()
         if self.sent:
             consts.nr_data_packets_sent += 1
-
-        # if self.sent and self.node is not None:
-        #     self.node.packets_sent_count += 1
 
     def __str__(self):
         return "data packet"

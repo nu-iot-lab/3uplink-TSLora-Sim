@@ -117,7 +117,7 @@ class EndNode(NetworkNode):
         self.sf_value = 0
 
         self.nr_lost = 0
-        self.nr_data_collisions = 0
+        self.nr_collisions = 0
 
         self.connected = True
         self.accept_received = False
@@ -126,6 +126,7 @@ class EndNode(NetworkNode):
         self.round_start_time = 0
         self.round_end_time = 0
 
+        # for RL coordination of uplinks
         self.uplink_attempts = 3
 
         # for triple uplink
@@ -208,7 +209,7 @@ class EndNode(NetworkNode):
         """
         Adjusts the node's behavior based on the selected action.
         """
-        # mapping actions to transmission attemts
+        # mapping actions to uplink attemts
         if self.counter_index == 0:
             if action <= 2:
                 self.uplink_attempts = action + 1
@@ -235,8 +236,6 @@ class EndNode(NetworkNode):
                 self.round_start_time = env.now + 1
                 self.missed_sack_count += 1
                 consts.nr_sack_missed_count += 1
-            else:
-                self.missed_sack_count = 0
 
             yield env.timeout(self.round_start_time - env.now)
 
@@ -267,11 +266,9 @@ class EndNode(NetworkNode):
                 # Packet is considered successfully received if not lost and RSSI is above sensitivity
                 self.packets_received_count += 1
 
-            prr_value = self.calculate_prr()
-            rssi_value = data_packet.rssi(self.data_gateway)
-            sf_value = data_packet.sf
-
-            self.rssi_value = rssi_value
+            self.prr_value = self.calculate_prr()
+            self.rssi_value = data_packet.rssi(self.data_gateway)
+            self.sf_value = data_packet.sf
 
             # [NODE-SEND-PACKET] -- node {self.node_id} sent data packet
 
@@ -283,9 +280,9 @@ class EndNode(NetworkNode):
             bw = f"BW: {data_packet.bw} kHz"
             airtime = f"Airtime: {data_packet.rec_time / 1000.0:.3f} s"
             guardtime = f"Guardtime: {self.guard_time / 1000.0:.3f} ms"
-            rssi = f"RSSI: {rssi_value:.3f} dBm"
-            prr = f"PRR: {prr_value:.3f}"
-            sf = f"SF: {sf_value}"
+            rssi = f"RSSI: {self.rssi_value:.3f} dBm"
+            prr = f"PRR: {self.prr_value:.3f}"
+            sf = f"SF: {self.sf_value}"
 
             # logging the message
             log_message = f"{node_send_packet:<30}{uplink_number:<30}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
