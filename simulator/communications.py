@@ -139,16 +139,18 @@ class Packet:
                 ):
                     if self.processed and self.was_sent_to(other.node):
                         log(env, f"[PACKET-DROP] {self} from {self.node} is dropped")
-                        self.node.nr_collisions += 1
                         self.processed = False
+                        if not self.node.is_gateway():
+                            self.node.nr_collisions += 1
 
                     if other.processed and other.was_sent_to(self.node):
                         log(
                             env,
                             f"[PACKET-DROP-OTHER] {other} from {other.node} is dropped",
                         )
-                        other.node.nr_collisions += 1
                         other.processed = False
+                        if not other.node.is_gateway():
+                            other.node.nr_collisions += 1
 
                 if (
                     frequency_collision(self, other)

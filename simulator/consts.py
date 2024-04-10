@@ -50,7 +50,7 @@ variance = 1.0
 min_wait_time = 4.5
 
 # max distance between nodes and base station
-max_dist = 180
+max_dist = 175
 
 # base station position
 bsx = max_dist + 10

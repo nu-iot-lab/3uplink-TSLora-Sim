@@ -7,9 +7,6 @@ from simulator.utils import show_final_statistics
 
 from stable_baselines3 import DQN
 
-# Gymnasium environment
-gym_env = gym.make("loraenv/LoRa-v0")
-
 if __name__ == "__main__":
     if len(sys.argv) == 5:
         nodes_count = int(sys.argv[1])
@@ -17,7 +14,9 @@ if __name__ == "__main__":
         avg_wake_up_time = int(sys.argv[3]) * 1000
         sim_time = int(sys.argv[4]) * 1000
 
-        gym_env.setup(
+        # Gymnasium environment
+        gym_env = gym.make(
+            "loraenv/LoRa-v0",
             nodes_count=nodes_count,
             data_size=data_size,
             avg_wake_up_time=avg_wake_up_time,
@@ -26,21 +25,21 @@ if __name__ == "__main__":
 
         # Training Phase
         # --------------
-        print("!-- TRAINING START --!")
+        print("\n!-- TRAINING START --!\n")
         model = DQN("MultiInputPolicy", gym_env, verbose=1)
 
         # Calculate total timesteps for training
         episodes = 10
         total_timesteps = (
-            sim_time / 1000 * episodes
-        )  # Assuming 1 timestep = 1 second in simulation
-        model.learn(total_timesteps=int(total_timesteps), log_interval=4)
+            sim_time / 1000
+        ) * episodes  # Assuming 1 timestep = 1 second in simulation
+        model.learn(total_timesteps=total_timesteps, log_interval=4, progress_bar=True)
         model.save("lora_model")
-        print("!-- TRAINING END --!")
+        print("\n!-- TRAINING END --!\n")
 
         # Evaluation Phase
         # ----------------
-        print("!-- EVALUATION START --!")
+        print("\n!-- EVALUATION START --!\n")
         # Load the trained model (optional if you just trained it)
         # model = DQN.load("lora_model")
         obs, info = gym_env.reset()
@@ -53,7 +52,7 @@ if __name__ == "__main__":
                 obs, info = gym_env.reset()
                 break
 
-        print("!-- EVALUATION END --!")
+        print("\n!-- EVALUATION END --!\n")
 
     else:
         print(

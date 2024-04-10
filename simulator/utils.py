@@ -90,6 +90,7 @@ def show_final_statistics():
 
     print("\n!-- NODE STATISTICS --!\n")
     sum = 0
+    max_length = max(len(str(node.packets_sent_count)) for node in consts.nodes)
     for node in consts.nodes:
         consts.nr_received_data_packets += node.packets_received_count
         node.calculate_prr()
@@ -97,15 +98,15 @@ def show_final_statistics():
         print(
             f"NODE {node.node_id}: "
             f"PRR - {node.calculate_prr():.3f}, "
-            f"{node.packets_sent_count:3} packets sent, "
-            f"{node.packets_received_count:3} packets received, "
-            f"{node.missed_sack_count:3} SACKs missed, "
-            f"{node.nr_lost:3} packets lost, "
-            f"{node.nr_collisions:3} collisions"
+            f"{node.packets_sent_count:{max_length}} packets sent, "
+            f"{node.packets_received_count:{max_length}} packets received, "
+            f"{node.missed_sack_count:{max_length}} SACKs missed, "
+            f"{node.nr_lost:{max_length}} packets lost, "
+            f"{node.nr_collisions:{max_length}} collisions"
         )
     print(f"Average PRR: {(sum / nodes_count):.3f}")
 
-    print("\n!-- TOTAL STATISTICS --!\n")
+    print("\n!-- NETWORK STATISTICS --!\n")
     print("Data collisions:", consts.nr_data_collisions)
     print("Lost packets (due to path loss):", consts.nr_lost)
     print("Transmitted data packets:", consts.nr_data_packets_sent)

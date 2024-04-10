@@ -232,7 +232,7 @@ class EndNode(NetworkNode):
                 yield env.timeout(self.round_end_time - env.now)
 
             if self.round_start_time < env.now:
-                log(env, f"[SACK-MISSED] {self}: missed sack packet")
+                log(env, f"[SACK-MISSED] {self} missed sack packet")
                 self.round_start_time = env.now + 1
                 self.missed_sack_count += 1
                 consts.nr_sack_missed_count += 1

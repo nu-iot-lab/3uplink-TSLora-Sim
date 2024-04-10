@@ -15,20 +15,36 @@ class LoRaEnv(gym.Env):
 
     metadata = {"render_modes": ["console"]}
 
-    def __init__(self):
+    def __init__(
+        self,
+        nodes_count=10,
+        data_size=16,
+        avg_wake_up_time=30 * 1000,
+        sim_time=3600 * 1000,
+    ):
         super(LoRaEnv, self).__init__()
 
         # Weight for penalizing retransmissions
-        self.lambda_value = 0.01
+        self.lambda_value = 0.0001
 
         # Actions: number of transmission slots (0 = 1, 1 = 2, 2 = 3)
         self.action_space = spaces.Discrete(3)
 
-        # Default values for simulation parameters
-        self.nodes_count = 10
-        self.data_size = 16
-        self.avg_wake_up_time = 30 * 1000
-        self.sim_time = 3600 * 1000
+        # Setup simulation parameters
+        self.nodes_count = nodes_count
+        self.data_size = data_size
+        self.avg_wake_up_time = avg_wake_up_time
+        self.sim_time = sim_time
+
+        # Setup simulator environment
+        self.simpy_env = simpy.Environment()
+        self.simulator = LoraSimulator(
+            self.nodes_count,
+            self.data_size,
+            self.avg_wake_up_time,
+            self.sim_time,
+            self.simpy_env,
+        )
 
         # Observation space: PRR, RSSI, SF for each node
         self.observation_space = spaces.Dict(
@@ -44,31 +60,15 @@ class LoRaEnv(gym.Env):
                 ),
             }
         )
-
-        self.simpy_env = simpy.Environment()
-        self.simulator = LoraSimulator(
-            self.nodes_count,
-            self.data_size,
-            self.avg_wake_up_time,
-            self.sim_time,
-            self.simpy_env,
-        )
         self.current_step = 0
         self.done = False
         self.truncated = False
 
-    # Setup the environment
-    def setup(self, nodes_count, data_size, avg_wake_up_time, sim_time):
-        self.nodes_count = nodes_count
-        self.data_size = data_size
-        self.avg_wake_up_time = avg_wake_up_time
-        self.sim_time = sim_time
-
     # Update the observation space
     def _next_observation(self):
-        prr = np.array([node.prr_value for node in consts.nodes])
-        rssi = np.array([node.rssi_value for node in consts.nodes])
-        sf = np.array([node.sf_value for node in consts.nodes])
+        prr = np.array([node.prr_value for node in consts.nodes], dtype=np.float64)
+        rssi = np.array([node.rssi_value for node in consts.nodes], dtype=np.float64)
+        sf = np.array([node.sf_value for node in consts.nodes], dtype=np.int64)
         # print(
         #     f"Next Observation for STEP [{self.current_step}]:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n"
         # )
@@ -106,19 +106,15 @@ class LoRaEnv(gym.Env):
     # Reward formula
     def _calculate_reward(self):
         mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
-        # retransmission_penalty = self.lambda_value * sum(
-        #     [node.nr_uplinks for node in consts.nodes]
-        # )
-        # reward = prr - retransmission_penalty
-        reward = mean_prr
+        retransmission_penalty = self.lambda_value * sum(
+            [node.packets_sent_count for node in consts.nodes]
+        )
+        reward = mean_prr - retransmission_penalty
         return reward
 
     # Reset the environment
     def reset(self, seed=None, options=None):
         self.simpy_env = simpy.Environment()
-        self.current_step = 0
-        self.done = False
-        self.truncated = False
         self.simulator = LoraSimulator(
             self.nodes_count,
             self.data_size,
@@ -126,6 +122,9 @@ class LoRaEnv(gym.Env):
             self.sim_time,
             self.simpy_env,
         )
+        self.current_step = 0
+        self.done = False
+        self.truncated = False
         utils.reset_simulator()
         self.simulator.add_nodes()
         info = {}
