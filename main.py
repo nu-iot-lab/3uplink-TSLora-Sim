@@ -51,7 +51,6 @@ if __name__ == "__main__":
             if done or terminated:
                 utils.show_final_statistics()
                 utils.log(f"!-- EVALUATION END --!")
-                obs, info = gym_env.reset()
                 break
 
     else:

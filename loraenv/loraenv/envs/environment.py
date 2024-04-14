@@ -65,16 +65,6 @@ class LoRaEnv(gym.Env):
         self.done = False
         self.truncated = False
 
-    # Update the observation space
-    def _next_observation(self):
-        prr = np.array([node.prr_value for node in consts.nodes], dtype=np.float64)
-        rssi = np.array([node.rssi_value for node in consts.nodes], dtype=np.float64)
-        sf = np.array([node.sf_value for node in consts.nodes], dtype=np.int64)
-        # print(
-        #     f"Next Observation for STEP [{self.current_step}]:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n"
-        # )
-        return {"prr": prr, "rssi": rssi, "sf": sf}
-
     # Execute the action
     def step(self, action):
         if self.current_step == 0:
@@ -106,6 +96,16 @@ class LoRaEnv(gym.Env):
         self.done = self.current_step >= self.sim_time
 
         return obs, reward, self.done, self.truncated, info
+
+    # Update the observation space
+    def _next_observation(self):
+        prr = np.array([node.prr_value for node in consts.nodes], dtype=np.float64)
+        rssi = np.array([node.rssi_value for node in consts.nodes], dtype=np.float64)
+        sf = np.array([node.sf_value for node in consts.nodes], dtype=np.int64)
+        # print(
+        #     f"Next Observation for STEP [{self.current_step}]:\nPRR: {prr}\nRSSI: {rssi}\nSF: {sf}\n"
+        # )
+        return {"prr": prr, "rssi": rssi, "sf": sf}
 
     # Reward formula
     def _calculate_reward(self):
