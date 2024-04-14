@@ -53,7 +53,6 @@ class DataGateway(Gateway):
 
             if self.frame(sf).nr_taken_slots != 0:
                 log(
-                    env,
                     f"[SACK-TRANSMIT]"
                     f'{f"SF: {sf} ":<10}'
                     f'{f"Data size: {sack_packet.pl} b ":<20}'
@@ -61,6 +60,7 @@ class DataGateway(Gateway):
                     f'{f"Freq: {sack_packet.freq / 1000000.0:.3f} MHZ ":<24}'
                     f'{f"BW: {sack_packet.bw}  kHz ":<18}'
                     f'{f"Airtime: {sack_packet.rec_time / 1000.0:.3f} s ":<22}',
+                    env,
                 )
 
             for n in consts.nodes:
@@ -81,8 +81,8 @@ class DataGateway(Gateway):
         if sack_packet.is_lost(node):
             sack_packet.lost = True
             log(
-                env,
                 f"[SACK-FAIL] {self} transmit to {node} SACK failed, too much path loss: {sack_packet.rssi(node)}",
+                env,
             )
 
         sack_packet.check_collision(env)
@@ -92,7 +92,7 @@ class DataGateway(Gateway):
         data_gateway.frame(sf).check_data_collision(env)
 
         if sack_packet.is_received():
-            log(env, f"[SACK-RECEIVED] {node} received SACK packet")
+            log(f"[SACK-RECEIVED] {node} received SACK packet", env)
             node.round_start_time = self.frame(sf).next_round_start_time
             node.network_size = self.frame(sf).nr_slots
             node.guard_time = self.frame(sf).guard_time
@@ -100,7 +100,7 @@ class DataGateway(Gateway):
             if node.waiting_first_sack:
                 node.sack_packet_received.succeed()
         else:
-            log(env, f"[SACK-NOT-RECEIVED] Sack packet was not received by {node}")
+            log(f"[SACK-NOT-RECEIVED] Sack packet was not received by {node}", env)
         sack_packet.reset()
 
 
@@ -232,7 +232,7 @@ class EndNode(NetworkNode):
                 yield env.timeout(self.round_end_time - env.now)
 
             if self.round_start_time < env.now:
-                log(env, f"[SACK-MISSED] {self} missed sack packet")
+                log(f"[SACK-MISSED] {self} missed sack packet", env)
                 self.round_start_time = env.now + 1
                 self.missed_sack_count += 1
                 consts.nr_sack_missed_count += 1
@@ -286,12 +286,12 @@ class EndNode(NetworkNode):
 
             # logging the message
             log_message = f"{node_send_packet:<30}{uplink_number:<30}{data_size:<20}{freq:<24}{bw:<18}{airtime:<22}{guardtime}\n{rssi:<25}{prr}\n{sf:<10}"
-            log(env, log_message)
+            log(log_message, env)
 
             if data_packet.rssi(self.data_gateway) < get_sensitivity(
                 data_packet.sf, data_packet.bw
             ):
-                log(env, f"[NODE-LOST] {self}: packet will be lost")
+                log(f"[NODE-LOST] {self}: packet will be lost", env)
                 data_packet.lost = True
 
             data_packet.check_collision(env)

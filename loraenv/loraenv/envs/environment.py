@@ -19,12 +19,13 @@ class LoRaEnv(gym.Env):
         self,
         nodes_count=10,
         data_size=16,
-        avg_wake_up_time=30 * 1000,
-        sim_time=3600 * 1000,
+        avg_wake_up_time=30,
+        sim_time=3600,
     ):
         super(LoRaEnv, self).__init__()
 
         # Weight for penalizing retransmissions
+        # (0.001 = prioritize retransmissions over PRR, 0.0001 = prioritize PRR over retransmissions)
         self.lambda_value = 0.0001
 
         # Actions: number of transmission slots (0 = 1, 1 = 2, 2 = 3)
@@ -41,8 +42,8 @@ class LoRaEnv(gym.Env):
         self.simulator = LoraSimulator(
             self.nodes_count,
             self.data_size,
-            self.avg_wake_up_time,
-            self.sim_time,
+            self.avg_wake_up_time * 1000,
+            self.sim_time * 1000,
             self.simpy_env,
         )
 
@@ -78,7 +79,7 @@ class LoRaEnv(gym.Env):
     def step(self, action):
         if self.current_step == 0:
             self.simulator.start_simulation()
-        if self.current_step >= (self.sim_time / 1000):
+        if self.current_step >= self.sim_time:
             self.done = True
             reward = self._calculate_reward()
             obs = self._next_observation()
@@ -91,7 +92,10 @@ class LoRaEnv(gym.Env):
         # Advance the simulation by one second
         self.current_step += 1
         timestep = self.current_step * 1000
-        print(f"!-- UPLINK NUMBER FOR STEP [{self.current_step}]: {action + 1} --!")
+        utils.log(
+            f"!-- UPLINK NUMBER FOR STEP [{self.current_step}]: {action + 1} --!",
+            self.simpy_env,
+        )
         self.simulator.env.run(until=timestep)
 
         reward = self._calculate_reward()
@@ -99,7 +103,7 @@ class LoRaEnv(gym.Env):
         info = {}
 
         # Check if the entire simulation duration has been reached
-        self.done = self.current_step >= (self.sim_time / 1000)
+        self.done = self.current_step >= self.sim_time
 
         return obs, reward, self.done, self.truncated, info
 
@@ -110,6 +114,7 @@ class LoRaEnv(gym.Env):
             [node.packets_sent_count for node in consts.nodes]
         )
         reward = mean_prr - retransmission_penalty
+        # print(f"Reward for STEP [{self.current_step}]: {reward:.3f}")
         return reward
 
     # Reset the environment
@@ -118,8 +123,8 @@ class LoRaEnv(gym.Env):
         self.simulator = LoraSimulator(
             self.nodes_count,
             self.data_size,
-            self.avg_wake_up_time,
-            self.sim_time,
+            self.avg_wake_up_time * 1000,
+            self.sim_time * 1000,
             self.simpy_env,
         )
         self.current_step = 0

@@ -1,4 +1,5 @@
 import simulator.consts as consts
+import simulator.utils as utils
 
 from simulator.entities import EndNode
 from simulator.singleton import DataGatewaySingleton
@@ -23,14 +24,7 @@ class LoraSimulator:
             node.perform_action(action)
 
     def start_simulation(self):
-        # Initialize slots inside the frame
         from simulator.frame import Frame
-
-        print("\n!-- NODES --!")
-        for i in range(self.nodes_count):
-            print(consts.nodes[i])
-
-        print("\n!-- FRAME --!")
 
         for sf in range(7, 10):
             data_gateway.frame(sf).reset_frame()

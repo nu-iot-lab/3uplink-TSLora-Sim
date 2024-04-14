@@ -124,7 +124,7 @@ class Packet:
         self.processed = True
         if BroadcastTraffic.nr_data_packets > consts.max_packets:
             log(
-                env, "[PACKET-OVERFLOW] too many packets are being sent to the gateway:"
+                "[PACKET-OVERFLOW] too many packets are being sent to the gateway:", env
             )
             self.processed = False
 
@@ -138,15 +138,15 @@ class Packet:
                     and self.sf == other.sf
                 ):
                     if self.processed and self.was_sent_to(other.node):
-                        log(env, f"[PACKET-DROP] {self} from {self.node} is dropped")
+                        log(f"[PACKET-DROP] {self} from {self.node} is dropped", env)
                         self.processed = False
                         if not self.node.is_gateway():
                             self.node.nr_collisions += 1
 
                     if other.processed and other.was_sent_to(self.node):
                         log(
-                            env,
                             f"[PACKET-DROP-OTHER] {other} from {other.node} is dropped",
+                            env,
                         )
                         other.processed = False
                         if not other.node.is_gateway():
@@ -163,7 +163,7 @@ class Packet:
                             p2 = other
                         else:
                             p2 = self
-                        log(env, f"[COLLISION] {p.node} collided with {p2.node}")
+                        log(f"[COLLISION] {p.node} collided with {p2.node}", env)
 
 
 class DataPacket(Packet):
