@@ -162,10 +162,7 @@ cython_debug/
 **/.DS_Store
 logs/*
 .vscode
-<<<<<<< HEAD
 
 /output.txt
 loraenv/loraenv.egg-info
 *.png
-=======
->>>>>>> cb3e371 (docs: update .gitignore)
