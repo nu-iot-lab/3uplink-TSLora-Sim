@@ -2,6 +2,7 @@ import sys
 import gymnasium as gym
 import loraenv
 import simulator.utils as utils
+import matplotlib.pyplot as plt
 
 from simulator.lora_simulator import LoraSimulator
 
@@ -44,14 +45,35 @@ if __name__ == "__main__":
         # ----------------
         utils.logging = True
         utils.log(f"!-- EVALUATION START --!")
+        rewards_per_evaluation = []
+
+
         obs, info = gym_env.reset()
+
+        total_reward = 0
+        done = False
         while True:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, terminated, info = gym_env.step(action)
+            total_reward += reward
+            rewards_per_evaluation.append(reward)  # Log each reward
             if done or terminated:
                 utils.show_final_statistics()
                 utils.log(f"!-- EVALUATION END --!")
                 break
+            
+        utils.show_final_statistics()
+        utils.log(f"!-- EVALUATION END --!")
+        print(f"Total Reward during evaluation: {total_reward}")
+
+        # Plot the rewards collected during the evaluation
+        plt.figure(figsize=(10, 5))
+        plt.plot(range(1, len(rewards_per_evaluation) + 1), rewards_per_evaluation, marker='o', linestyle='-')
+        plt.title('Rewards per Step During Evaluation')
+        plt.xlabel('Step')
+        plt.ylabel('Reward')
+        plt.grid(True)
+        plt.show()
 
     else:
         print(
