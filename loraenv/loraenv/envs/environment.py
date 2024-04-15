@@ -24,13 +24,6 @@ class LoRaEnv(gym.Env):
     ):
         super(LoRaEnv, self).__init__()
 
-        # Weight for penalizing retransmissions
-        # (0.001 = prioritize retransmissions over PRR, 0.0001 = prioritize PRR over retransmissions)
-        self.lambda_value = 0.0001
-
-        # Actions: number of transmission slots (0 = 1, 1 = 2, 2 = 3)
-        self.action_space = spaces.Discrete(3)
-
         # Setup simulation parameters
         self.nodes_count = nodes_count
         self.data_size = data_size
@@ -46,6 +39,9 @@ class LoRaEnv(gym.Env):
             self.sim_time * 1000,
             self.simpy_env,
         )
+
+        # Action space: number of transmission slots (0 = 1, 1 = 2, 2 = 3)
+        self.action_space = spaces.Discrete(3)
 
         # Observation space: PRR, RSSI, SF for each node
         self.observation_space = spaces.Dict(
@@ -109,8 +105,10 @@ class LoRaEnv(gym.Env):
 
     # Reward formula
     def _calculate_reward(self):
+        # Weight for penalizing retransmissions (0.001 = retransmissions over PRR, 0.0001 = PRR over retransmissions)
+        lambda_value = 0.0001
         mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
-        retransmission_penalty = self.lambda_value * sum(
+        retransmission_penalty = lambda_value * sum(
             [node.packets_sent_count for node in consts.nodes]
         )
         reward = mean_prr - retransmission_penalty

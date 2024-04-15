@@ -165,3 +165,4 @@ logs/*
 
 /output.txt
 loraenv/loraenv.egg-info
+*.png
