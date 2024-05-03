@@ -1,5 +1,5 @@
-# from entities import NetworkNode
 from simulator.broadcast_traffic import BroadcastTraffic
+
 from simulator.utils import *
 import simulator.consts as consts
 import numpy as np
@@ -95,6 +95,8 @@ class Packet:
     def update_statistics(self):
         if self.lost:
             consts.nr_lost += 1
+            if not self.node.is_gateway():
+                self.node.nr_lost += 1
 
         if self.collided:
             consts.nr_collisions += 1
@@ -118,11 +120,11 @@ class Packet:
     def was_sent_to(self, node):
         return self.receiver is node
 
-    def check_collision(self):
+    def check_collision(self, env):
         self.processed = True
         if BroadcastTraffic.nr_data_packets > consts.max_packets:
             log(
-                env, "[PACKET-OVERFLOW] too many packets are being sent to the gateway:"
+                "[PACKET-OVERFLOW] too many packets are being sent to the gateway:", env
             )
             self.processed = False
 
@@ -136,20 +138,24 @@ class Packet:
                     and self.sf == other.sf
                 ):
                     if self.processed and self.was_sent_to(other.node):
-                        log(env, f"[PACKET-DROP] {self} from {self.node} is dropped")
+                        log(f"[PACKET-DROP] {self} from {self.node} is dropped", env)
                         self.processed = False
+                        if not self.node.is_gateway():
+                            self.node.nr_collisions += 1
 
                     if other.processed and other.was_sent_to(self.node):
                         log(
-                            env,
                             f"[PACKET-DROP-OTHER] {other} from {other.node} is dropped",
+                            env,
                         )
                         other.processed = False
+                        if not other.node.is_gateway():
+                            other.node.nr_collisions += 1
 
                 if (
                     frequency_collision(self, other)
                     and sf_collision(self, other)
-                    and timing_collision(self, other)
+                    and timing_collision(self, other, env)
                 ):
                     for p in power_collision(self, other):
                         p.collided = True
@@ -157,7 +163,7 @@ class Packet:
                             p2 = other
                         else:
                             p2 = self
-                        log(env, f"[COLLISION] {p.node} collided with {p2.node}")
+                        log(f"[COLLISION] {p.node} collided with {p2.node}", env)
 
 
 class DataPacket(Packet):
@@ -175,9 +181,6 @@ class DataPacket(Packet):
         super().update_statistics()
         if self.sent:
             consts.nr_data_packets_sent += 1
-
-        if self.sent and self.node is not None:
-            self.node.packets_sent_count += 1
 
     def __str__(self):
         return "data packet"

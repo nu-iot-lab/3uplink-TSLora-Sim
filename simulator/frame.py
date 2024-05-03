@@ -1,11 +1,7 @@
-from random import gauss, uniform
-
-from simulator.communications import DataPacket, SackPacket
-from simulator.singleton import EnvironmentSingleton
-
 import simulator.consts as consts
 
-env = EnvironmentSingleton.get_instance()
+from random import gauss, uniform
+from simulator.communications import DataPacket, SackPacket
 
 
 class Frame:
@@ -43,13 +39,17 @@ class Frame:
             self.add(node)
         return slots
 
-    def check_data_collision(self):
+    def reset_frame(self):
+        self.nr_taken_slots = 0
+        self.slots = [None for _ in range(self.nr_slots)]
+
+    def check_data_collision(self, env):
         drifting_times = {}
         for i in range(1, self.nr_taken_slots):
             if self.slots[i] is not None and self.slots[i - 1] is not None:
                 # generate drifting time for the current slot if it hasn't been generated before
                 if i not in drifting_times:
-                    drifting_times[i] = gauss(0, 0.5)
+                    drifting_times[i] = gauss(0, 1.0)
 
                 df = drifting_times[i]
                 start_time_n = env.now + self.data_slot_len * i + df + self.guard_time
@@ -59,7 +59,7 @@ class Frame:
 
                 # generate drifting time for the previous slot if it hasn't been generated before
                 if i - 1 not in drifting_times:
-                    drifting_times[i - 1] = gauss(0, 0.5)
+                    drifting_times[i - 1] = gauss(0, 1.0)
 
                 df_prev = drifting_times[i - 1]
                 start_time_prev = (

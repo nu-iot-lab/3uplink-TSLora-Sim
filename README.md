@@ -2,7 +2,9 @@
 
 ## Description
 
-The 3uplink TSLora Simulator project, developed for the NU IoT Lab, focuses on simulating the transmission and reception of data over LoRa (Long Range) networks. This project aims to provide a robust platform for testing and developing IoT applications that rely on LoRa technology for communication.
+
+The 3uplink TSLora Simulator project, developed for the NU IoT Lab, focuses on simulating the transmission and reception of data over LoRa (Long Range) networks. This project aims to provide a robust platform for testing and developing IoT applications that rely on LoRa technology for communication. Simulator introduces an advanced Reinforcement Learning (RL) functionality, based on the Deep Q Network (DQN) algorithm, to automatically choose the best number of uplinks (from 1 to 3) for nodes to transmit data, optimizing for the best Packet Reception Rate (PRR) value.
+
 
 ## Installation
 
@@ -26,6 +28,13 @@ cd 3uplink-TSLora-Sim
 pip install -r requirements.txt
 ```
 
+
+4. Install our custom Gymnasium environment for LoRa:
+
+```
+pip install -e loraenv
+```
+
 ## Usage
 
 To run the simulation, execute the following command from the main directory:
@@ -45,6 +54,9 @@ Default parameter values:
 
 -   Simulates LoRa network behaviour for uplink data transmission.
 -   Supports various simulation parameters to mimic real-world IoT environments.
+
+-   Integrates a Reinforcement Learning (RL) mechanism, utilizing the Deep Q Network (DQN) algorithm, to dynamically optimize the number of uplinks for nodes, aiming to achieve the best Packet Reception Rate (PRR).
+
 -   Includes visualization tools for analyzing the simulation results.
 
 ## License
