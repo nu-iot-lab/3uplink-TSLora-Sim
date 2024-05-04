@@ -33,7 +33,7 @@ drifting_range = [-0.2, 0.2]
 mean = 0  # Mean of the normal distribution
 std_dev = 0.0001  # Standard deviation of the normal distribution
 
-Ptx = 14
+Ptx = 14  # 20 when gateway transmits SACK packet
 gamma = 2.08
 d0 = 40.0
 var = 0

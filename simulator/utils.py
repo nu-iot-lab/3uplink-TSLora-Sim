@@ -116,6 +116,7 @@ def show_final_statistics():
         sum += node.calculate_prr()
         log(
             f"NODE {node.node_id}: "
+            f"SF - {node.sf}, "
             f"PRR - {node.calculate_prr():.3f}, "
             f"{node.packets_sent_count:{max_length}} packets sent, "
             f"{node.packets_received_count:{max_length}} packets received, "
