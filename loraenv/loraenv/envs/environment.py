@@ -40,8 +40,8 @@ class LoRaEnv(gym.Env):
             self.simpy_env,
         )
 
-        # Action space: number of transmission slots (0 = 1, 1 = 2, 2 = 3)
-        self.action_space = spaces.Discrete(3)
+        # Action space: number of transmission slots (0 = 1, 1 = 2, 2 = 3) for each node
+        self.action_space = spaces.MultiDiscrete([3] * self.nodes_count)
 
         # Observation space: PRR, RSSI, SF for each node
         self.observation_space = spaces.Dict(
@@ -82,10 +82,11 @@ class LoRaEnv(gym.Env):
         # Advance the simulation by one second
         self.current_step += 1
         timestep = self.current_step * 1000
-        utils.log(
-            f"!-- UPLINK NUMBER FOR STEP [{self.current_step}]: {action + 1} --!",
-            self.simpy_env,
-        )
+        for i in range(self.nodes_count):
+            utils.log(
+                f"!-- UPLINK NUMBER FOR STEP [{self.current_step}] FOR NODE {i}: {action[i] + 1} --!",
+                self.simpy_env,
+            )
         self.simulator.env.run(until=timestep)
 
         reward = self._calculate_reward(

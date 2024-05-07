@@ -10,7 +10,7 @@ import simulator.consts as consts
 from simulator.lora_simulator import LoraSimulator
 from reward_caller_callback import RewardLoggerCallback
 
-from stable_baselines3 import DQN
+from stable_baselines3 import PPO
 
 if __name__ == "__main__":
     if len(sys.argv) == 5:
@@ -31,7 +31,7 @@ if __name__ == "__main__":
         train = False
         if train:
             # Create new model
-            model = DQN("MultiInputPolicy", gym_env, verbose=1)
+            model = PPO("MultiInputPolicy", gym_env, verbose=1)
             reward_logger = RewardLoggerCallback()
 
             # Training Phase
@@ -39,7 +39,7 @@ if __name__ == "__main__":
             utils.logging = False
             utils.log(f"!-- TRAINING START --!")
             # Calculate total timesteps for training
-            episodes = 100
+            episodes = 10
             total_timesteps = (
                 sim_time * episodes
             )  # Assuming 1 timestep = 1 second in simulation
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
         # Evaluation Phase
         # ----------------
-        model = DQN.load("lora_model")
+        model = PPO.load("lora_model")
         utils.log(f"!-- EVALUATION START --!")
         obs, info = gym_env.reset()
         rewards_per_evaluation = []
