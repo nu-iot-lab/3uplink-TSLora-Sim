@@ -1,13 +1,18 @@
 import gymnasium as gym
-# import numpy as np
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import BaseCallback
 import matplotlib.pyplot as plt
 
-# Assuming you have an appropriate multi-agent version of your environment registered in Gym
+from multienv.multienv_v0 import LoRaEnvParallel
+from pettingzoo.utils import parallel_to_aec
+from pettingzoo.utils.wrappers import BaseWrapper
+from stable_baselines3.common.env_util import make_vec_env
+from supersuit import pad_action_space_v0, pad_observations_v0
+import supersuit as ss
+
 class RewardLoggerCallback(BaseCallback):
-    def __init__(self, check_freq):
-        super(RewardLoggerCallback, self).__init__()
+    def __init__(self, check_freq, verbose=1):
+        super(RewardLoggerCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.episode_rewards = []
 
@@ -23,36 +28,36 @@ if __name__ == "__main__":
     avg_wake_up_time = 30  # Example parameter
     sim_time = 3600   # Example parameter
 
-    env = gym.make("loraenv/LoRaMulti-v0", config={
-        "nodes_count": nodes_count,
-        "data_size": data_size,
-        "avg_wake_up_time": avg_wake_up_time,
-        "sim_time": sim_time,
-    })
+    env = LoRaEnvParallel(nodes_count=nodes_count, data_size=data_size, avg_wake_up_time=avg_wake_up_time, sim_time=sim_time)
+    aec_env = env
+    # wrapped_env = pad_action_space(pad_observations(aec_env))
 
-    models = {agent: DQN("MlpPolicy", env, verbose=1) for agent in env.possible_agents}
+    # vec_env = pettingzoo_env_to_vec_env_v1(wrapped_env)
+    wrapped_env = pad_observations_v0(pad_action_space_v0(aec_env))
 
-    # Train each model
-    for agent, model in models.items():
-        callback = RewardLoggerCallback(check_freq=100)
-        model.learn(total_timesteps=int(sim_time * 100), callback=callback)
-        model.save(f"{agent}_lora_model")
-        plt.figure(figsize=(10, 5))
-        plt.plot(callback.episode_rewards, marker="o", linestyle="-")
-        plt.title(f"Total Reward per Episode During Training for {agent}")
-        plt.xlabel("Episode")
-        plt.ylabel("Total Reward")
-        plt.grid(True)
-        plt.savefig(f"{agent}_training_rewards.png")
+    vec_env = ss.pettingzoo_env_to_vec_env_v1(wrapped_env)
+    # aec_env = ss.concat_vec_envs_v1(aec_env, 8, num_cpus=1, base_class="stable_baselines3")
 
-    # Example evaluation phase for one agent
-    test_env = env
-    obs = test_env.reset()
-    done = {agent: False for agent in test_env.possible_agents}
-    while not all(done.values()):
-        actions = {agent: models[agent].predict(obs[agent], deterministic=True)[0] for agent in test_env.possible_agents}
-        obs, rewards, dones, _ = test_env.step(actions)
-        done = dones
+    model = DQN("MultiInputPolicy", vec_env, verbose=1)
+    reward_logger = RewardLoggerCallback(check_freq=100)
 
-    # Close environment
-    env.close()
+    # Training Phase
+    model.learn(total_timesteps=100, callback=reward_logger)
+    model.save("dqn_lora_model")
+
+    # Plot the rewards collected during the training
+    plt.figure(figsize=(10, 5))
+    plt.plot(reward_logger.episode_rewards, marker="o", linestyle="-")
+    plt.title("Total Reward per Episode During Training")
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
+    plt.grid(True)
+    plt.savefig("training_rewards.png")
+
+    # Evaluation Phase
+    obs = vec_env.reset()
+    done = False
+    while not done:
+        action, _states = model.predict(obs, deterministic=True)
+        obs, reward, done, info = vec_env.step(action)
+        vec_env.render()

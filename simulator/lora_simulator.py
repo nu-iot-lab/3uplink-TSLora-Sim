@@ -19,9 +19,10 @@ class LoraSimulator:
         for i in range(self.nodes_count):
             consts.nodes.append(EndNode(i, self.env, data_gateway))
 
-    def update_nodes_behavior(self, action):
-        for node in consts.nodes:
-            node.perform_action(action)
+    def update_nodes_behavior(self, index, action):
+        # for node in consts.nodes:
+        #     node.perform_action(action)
+        consts.nodes[index].perform_action(action)
 
     def start_simulation(self):
         from simulator.frame import Frame
