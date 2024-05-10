@@ -39,7 +39,7 @@ if __name__ == "__main__":
             utils.logging = False
             utils.log(f"!-- TRAINING START --!")
             # Calculate total timesteps for training
-            episodes = 10
+            episodes = 500
             total_timesteps = (
                 sim_time * episodes
             )  # Assuming 1 timestep = 1 second in simulation

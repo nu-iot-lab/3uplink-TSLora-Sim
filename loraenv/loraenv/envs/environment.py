@@ -41,7 +41,7 @@ class LoRaEnv(gym.Env):
         )
 
         # Action space: number of transmission slots (0 = 1, 1 = 2, 2 = 3) for each node
-        self.action_space = spaces.MultiDiscrete([3] * self.nodes_count)
+        self.action_space = spaces.MultiDiscrete([4] * self.nodes_count)
 
         # Observation space: PRR, RSSI, SF for each node
         self.observation_space = spaces.Dict(
@@ -111,57 +111,28 @@ class LoRaEnv(gym.Env):
         return {"prr": prr, "rssi": rssi, "sf": sf}
 
     # Reward formula
+    # def _calculate_reward(self):
+    #     # Weight for penalizing retransmissions (0.001 = retransmissions over PRR, 0.0001 = PRR over retransmissions)
+    #     lambda_value = 0.0005
+    #     mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
+    #     retransmission_penalty = lambda_value * sum(
+    #         [node.packets_sent_count for node in consts.nodes]
+    #     )
+    #     reward = mean_prr - retransmission_penalty
+    #     # print(f"Reward for STEP [{self.current_step}]: {reward:.3f}", self.simpy_env)
+    #     return reward
+    
     def _calculate_reward(self):
         # Weight for penalizing retransmissions (0.001 = retransmissions over PRR, 0.0001 = PRR over retransmissions)
-        lambda_value = 0.0005
+        lambda_value = 0.0001
         mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
-        retransmission_penalty = lambda_value * sum(
+        retransmission_penalty =  sum(
             [node.packets_sent_count for node in consts.nodes]
-        )
-        reward = mean_prr - retransmission_penalty
-        # print(f"Reward for STEP [{self.current_step}]: {reward:.3f}", self.simpy_env)
+        ) 
+        received_count = sum([node.packets_received_count for node in consts.nodes])
+        reward = mean_prr - lambda_value * retransmission_penalty
+        # print(f"Reward for STEP [{self.current_step}]: {reward:.3f}")
         return reward
-
-    # def _calculate_reward(self, previous_mean_prr=None, previous_packets_sent=None):
-    #     lambda_value = 0.0001  # Base value for the retransmission penalty
-    #     prr_target = 0.98  # Target PRR that you find acceptable for the network
-
-    #     # Calculate the current mean PRR
-    #     mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
-
-    #     # Calculate the retransmissions for the current step
-    #     current_packets_sent = sum([node.packets_sent_count for node in consts.nodes])
-    #     change_in_uplinks = current_packets_sent - (
-    #         previous_packets_sent if previous_packets_sent is not None else 0
-    #     )
-
-    #     # Normalize the retransmissions
-    #     uplink_penalty = lambda_value * change_in_uplinks
-
-    #     # Dynamic adjustment of the lambda value based on performance
-    #     lambda_value = (
-    #         lambda_value / (prr_target / mean_prr)
-    #         if mean_prr < prr_target
-    #         else lambda_value * (mean_prr / prr_target)
-    #     )
-
-    #     # Calculate the change in PRR if we have a previous value to compare it with
-    #     prr_improvement = mean_prr - (
-    #         previous_mean_prr if previous_mean_prr is not None else mean_prr
-    #     )
-
-    #     # Combine the PRR improvement and the retransmission penalty
-    #     reward = prr_improvement - uplink_penalty
-
-    #     # Update the previous values
-    #     self.previous_mean_prr = mean_prr
-    #     self.previous_packets_sent = current_packets_sent
-
-    #     # utils.log(
-    #     #     f"Reward for STEP [{self.current_step}]: {reward:.3f}", self.simpy_env
-    #     # )
-
-    #     return reward
 
     # Reset the environment
     def reset(self, seed=None, options=None):

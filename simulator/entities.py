@@ -212,6 +212,7 @@ class EndNode(NetworkNode):
         # mapping actions to uplink attemts
         if self.counter_index == 0:
             if action <= 2:
+                print(f"Action applied: {action}, Uplink attempts set to: {self.uplink_attempts}")
                 self.uplink_attempts = action + 1
             else:
                 raise ValueError(f"Unknown action: {action}")
@@ -223,7 +224,7 @@ class EndNode(NetworkNode):
         while True:
 
             # calculating round start time
-            yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
+            # yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
             if self.waiting_first_sack:
                 yield self.sack_packet_received
                 self.waiting_first_sack = False
