@@ -1,65 +1,106 @@
+import sys
 import gymnasium as gym
-from stable_baselines3 import DQN
-from stable_baselines3.common.callbacks import BaseCallback
+import loraenv
+import simulator.utils as utils
 import matplotlib.pyplot as plt
 
-from pettingzoo.test import parallel_api_test
-from multienv.multienv_v0 import LoRaEnvParallel
-from pettingzoo.utils import parallel_to_aec
-from pettingzoo.utils.wrappers import BaseWrapper
-from stable_baselines3.common.env_util import make_vec_env
-from supersuit import pad_action_space_v0, pad_observations_v0
-import supersuit as ss
+import numpy as np
+import simulator.consts as consts
 
-class RewardLoggerCallback(BaseCallback):
-    def __init__(self, check_freq, verbose=1):
-        super(RewardLoggerCallback, self).__init__(verbose)
-        self.check_freq = check_freq
-        self.episode_rewards = []
+from simulator.lora_simulator import LoraSimulator
+from reward_caller_callback import RewardLoggerCallback
 
-    def _on_step(self) -> bool:
-        if self.n_calls % self.check_freq == 0:
-            rewards = self.training_env.get_attr('rewards')
-            self.episode_rewards.append(rewards)
-        return True
+from stable_baselines3 import PPO
 
 if __name__ == "__main__":
-    nodes_count = 10  # Example parameter
-    data_size = 16    # Example parameter
-    avg_wake_up_time = 30  # Example parameter
-    sim_time = 3600   # Example parameter
+    if len(sys.argv) == 5:
+        nodes_count = int(sys.argv[1])
+        data_size = int(sys.argv[2])
+        avg_wake_up_time = int(sys.argv[3])
+        sim_time = int(sys.argv[4])
 
-    env = LoRaEnvParallel(nodes_count=nodes_count, data_size=data_size, avg_wake_up_time=avg_wake_up_time, sim_time=sim_time)
-    parallel_api_test(env, num_cycles=1000)
-    # aec_env = env
-    # # wrapped_env = pad_action_space(pad_observations(aec_env))
+        # Gymnasium environment
+        gym_env = gym.make(
+            "loraenv/LoRa-v0",
+            nodes_count=nodes_count,
+            data_size=data_size,
+            avg_wake_up_time=avg_wake_up_time,
+            sim_time=sim_time,
+        )
 
-    # # vec_env = pettingzoo_env_to_vec_env_v1(wrapped_env)
-    # wrapped_env = pad_observations_v0(pad_action_space_v0(aec_env))
+        train = True
+        if train:
+            # Create new model
+            model = PPO("MultiInputPolicy", gym_env, verbose=1)
+            reward_logger = RewardLoggerCallback()
 
-    # vec_env = ss.pettingzoo_env_to_vec_env_v1(wrapped_env)
-    # # aec_env = ss.concat_vec_envs_v1(aec_env, 8, num_cpus=1, base_class="stable_baselines3")
+            # Training Phase
+            # --------------
+            utils.logging = False
+            utils.log(f"!-- TRAINING START --!")
+            # Calculate total timesteps for training
+            episodes = 10
+            total_timesteps = (
+                sim_time * episodes
+            )  # Assuming 1 timestep = 1 second in simulation
+            model.learn(
+                total_timesteps=total_timesteps,
+                log_interval=4,
+                progress_bar=True,
+                callback=reward_logger,
+            )
+            model.save("lora_model")
+            utils.log(f"!-- TRAINING END --!")
 
-    # model = DQN("MultiInputPolicy", vec_env, verbose=1)
-    # reward_logger = RewardLoggerCallback(check_freq=100)
+            # Plot the rewards collected during the training
+            plt.figure(figsize=(10, 5))
+            plt.plot(reward_logger.episode_rewards, marker="o", linestyle="-")
+            plt.title("Total Reward per Episode During Training")
+            plt.xlabel("Episode")
+            plt.ylabel("Total Reward")
+            plt.grid(True)
+            plt.savefig("training_phase.png")
 
-    # # Training Phase
-    # model.learn(total_timesteps=100, callback=reward_logger)
-    # model.save("dqn_lora_model")
+        # Evaluation Phase
+        # ----------------
+        model = PPO.load("lora_model")
+        utils.log(f"!-- EVALUATION START --!")
+        obs, info = gym_env.reset()
+        rewards_per_evaluation = [[] for _ in range(nodes_count)]  # List to hold rewards for each node
+        total_rewards_per_node = [0] * nodes_count  # List to hold total rewards for each node
 
-    # # Plot the rewards collected during the training
-    # plt.figure(figsize=(10, 5))
-    # plt.plot(reward_logger.episode_rewards, marker="o", linestyle="-")
-    # plt.title("Total Reward per Episode During Training")
-    # plt.xlabel("Episode")
-    # plt.ylabel("Total Reward")
-    # plt.grid(True)
-    # plt.savefig("training_rewards.png")
+        done = False
+        while True:
+            action, _states = model.predict(obs, deterministic=True)
+            obs, reward, done, terminated, info = gym_env.step(action)
+            for i in range(nodes_count):
+                rewards_per_evaluation[i].append(reward[i])  # Log each reward for each node
+                total_rewards_per_node[i] += reward[i]  # Sum rewards for each node
 
-    # # Evaluation Phase
-    # obs = vec_env.reset()
-    # done = False
-    # while not done:
-    #     action, _states = model.predict(obs, deterministic=True)
-    #     obs, reward, done, info = vec_env.step(action)
-    #     vec_env.render()
+            if done or terminated:
+                utils.show_final_statistics()
+                utils.log(f"!-- EVALUATION END --!")
+                break
+
+        # Plot the rewards collected during the evaluation for each node
+        plt.figure(figsize=(10, 5))
+        for i in range(nodes_count):
+            plt.plot(
+                range(1, len(rewards_per_evaluation[i]) + 1),
+                rewards_per_evaluation[i],
+                marker="o",
+                linestyle="-",
+                label=f'Node {i+1}'
+            )
+        plt.title("Rewards per Step During Evaluation for Each Node")
+        plt.xlabel("Step")
+        plt.ylabel("Reward")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig("evaluation_phase_per_node.png")
+
+    else:
+        print(
+            "usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
+        )
+        exit(-1)

@@ -4,24 +4,33 @@ from ray import tune
 from ray.rllib.algorithms.dqn import DQNConfig
 from ray.rllib.env import PettingZooEnv
 from ray.tune.registry import register_env
+import logging
 
 from multienv.multienv_v0 import env
+
+logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
     ray.init()
 
     # Register the environment
-    register_env("LoRaEnvParallel", lambda config: PettingZooEnv(env(config)))
+    def create_env(config):
+        env_instance = env()
+        logging.info(f"Custom Env possible_agents: {env_instance.possible_agents}")
+        return PettingZooEnv(env_instance)
+
+    register_env("LoRaEnvParallel", create_env)
 
     # Create a test environment to get observation and action spaces
-    test_env = PettingZooEnv(env({
-        "nodes_count": 10,
-        "data_size": 16,
-        "avg_wake_up_time": 30,
-        "sim_time": 3600
-    }))
-    obs_space = test_env.observation_space(test_env.possible_agents[0])
-    act_space = test_env.action_space(test_env.possible_agents[0])
+    test_env = create_env({})
+    logging.info(f"Wrapped Env possible_agents: {test_env.env.possible_agents}")
+
+    # Check if possible_agents exists
+    if hasattr(test_env.env, 'possible_agents'):
+        obs_space = test_env.env.observation_space(test_env.env.possible_agents[0])
+        act_space = test_env.env.action_space(test_env.env.possible_agents[0])
+    else:
+        raise AttributeError("The environment does not have 'possible_agents' attribute.")
 
     config = (
         DQNConfig()
@@ -38,7 +47,7 @@ if __name__ == "__main__":
             dueling=False,
         )
         .multi_agent(
-            policies={agent: (None, obs_space, act_space, {}) for agent in test_env.possible_agents},
+            policies={agent: (None, obs_space, act_space, {}) for agent in test_env.env.possible_agents},
             policy_mapping_fn=(lambda agent_id, *args, **kwargs: agent_id),
         )
         .resources(num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
@@ -53,10 +62,14 @@ if __name__ == "__main__":
         )
     )
 
-    tune.run(
-        "DQN",
-        name="DQN_LoRaEnvParallel",
-        stop={"timesteps_total": 1000000},
-        checkpoint_freq=10,
-        config=config.to_dict(),
-    )
+    try:
+        tune.run(
+            "DQN",
+            name="DQN_LoRaEnvParallel",
+            stop={"timesteps_total": 1000000},
+            checkpoint_freq=10,
+            config=config.to_dict(),
+        )
+    except Exception as e:
+        logging.error(f"An error occurred during training: {e}")
+        raise
