@@ -19,10 +19,14 @@ class ArgumentSingleton:
             self.sim_time = int(sys.argv[4])
 
         else:
-            print(
-                "usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
-            )
-            exit(-1)
+            self.nodes_count = 10
+            self.data_size = 16
+            self.avg_wake_up_time = 30 * 1000
+            self.sim_time = 3600 * 1000
+            # print(
+            #     "usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
+            # )
+            # exit(-1)
 
 
 class DataGatewaySingleton:
