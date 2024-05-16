@@ -5,24 +5,26 @@ from ray.rllib.algorithms.dqn import DQNConfig
 from ray.rllib.env import PettingZooEnv
 from ray.tune.registry import register_env
 import logging
+import sys
 
 from multienv.multienv_v0 import env
 
 logging.basicConfig(level=logging.INFO)
 
-if __name__ == "__main__":
-    ray.init()
+# Function to create the environment
+def create_env(config):
+    logging.info(f"Creating environment with config: {config}")
+    env_instance = env(**config)
+    logging.info(f"Custom Env possible_agents: {env_instance.possible_agents}")
+    return PettingZooEnv(env_instance)
 
-    # Register the environment
-    def create_env(config):
-        env_instance = env()
-        logging.info(f"Custom Env possible_agents: {env_instance.possible_agents}")
-        return PettingZooEnv(env_instance)
-
+# Function to train the environment
+def train_fn(config):
+    logging.info("Registering environment.")
     register_env("LoRaEnvParallel", create_env)
 
     # Create a test environment to get observation and action spaces
-    test_env = create_env({})
+    test_env = create_env(config)
     logging.info(f"Wrapped Env possible_agents: {test_env.env.possible_agents}")
 
     # Check if possible_agents exists
@@ -32,15 +34,10 @@ if __name__ == "__main__":
     else:
         raise AttributeError("The environment does not have 'possible_agents' attribute.")
 
-    config = (
+    algo_config = (
         DQNConfig()
-        .environment(env="LoRaEnvParallel", env_config={
-            "nodes_count": 10,
-            "data_size": 16,
-            "avg_wake_up_time": 30,
-            "sim_time": 3600
-        })
-        .rollouts(num_rollout_workers=1, rollout_fragment_length=30)
+        .environment(env="LoRaEnvParallel", env_config=config)
+        .env_runners(num_env_runners=1, rollout_fragment_length=30)
         .training(
             train_batch_size=200,
             hiddens=[],
@@ -68,8 +65,40 @@ if __name__ == "__main__":
             name="DQN_LoRaEnvParallel",
             stop={"timesteps_total": 1000000},
             checkpoint_freq=10,
-            config=config.to_dict(),
+            config=algo_config.to_dict(),
         )
     except Exception as e:
         logging.error(f"An error occurred during training: {e}")
         raise
+
+if __name__ == "__main__":
+    if len(sys.argv) != 5:
+        print("Usage: python3 main3.py <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>")
+        sys.exit(1)
+    
+    nodes_count = int(sys.argv[1])
+    data_size = int(sys.argv[2])
+    avg_wake_up_time = int(sys.argv[3])
+    sim_time = int(sys.argv[4])
+
+    ray.init()
+
+    try:
+        analysis = tune.run(
+            train_fn,
+            config={
+                "nodes_count": nodes_count,
+                "data_size": data_size,
+                "avg_wake_up_time": avg_wake_up_time,
+                "sim_time": sim_time
+            },
+            metric="episode_reward_mean",
+            mode="max"
+        )
+
+        print("Best checkpoint:", analysis.best_checkpoint)
+
+        with analysis.best_checkpoint.as_directory() as tmpdir:
+            trainer = DQNConfig.load_from_checkpoint(tmpdir)
+    except Exception as e:
+        logging.error(f"An error occurred during the Ray Tune run: {e}")
