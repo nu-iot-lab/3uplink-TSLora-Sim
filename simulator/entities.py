@@ -112,9 +112,17 @@ class EndNode(NetworkNode):
         self.packets_sent_count = 0
         self.packets_received_count = 0
 
+        self.x, self.y = EndNode.find_place_for_new_node()
+        self.dist = np.sqrt(
+            (self.x - consts.bsx) * (self.x - consts.bsx)
+            + (self.y - consts.bsy) * (self.y - consts.bsy)
+        )
+
+        self.sf = self.find_optimal_sf()
+
         self.prr_value = 0
         self.rssi_value = 0
-        self.sf_value = 0
+        self.sf_value = self.sf
 
         self.nr_lost = 0
         self.nr_collisions = 0
@@ -139,13 +147,8 @@ class EndNode(NetworkNode):
         self.data_packet = None
         self.sack_packet_received = env.event()
 
-        self.x, self.y = EndNode.find_place_for_new_node()
-        self.dist = np.sqrt(
-            (self.x - consts.bsx) * (self.x - consts.bsx)
-            + (self.y - consts.bsy) * (self.y - consts.bsy)
-        )
 
-        self.sf = self.find_optimal_sf()
+        
 
     def __str__(self):
         # return "EndNode: " + str(self.node_id) + " x: " + str(self.x) + " y: " + str(self.y) + " sf: " + str(self.sf)

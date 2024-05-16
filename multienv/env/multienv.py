@@ -128,7 +128,7 @@ class LoRaEnvParallel(ParallelEnv):
     def observe(self, agent):
         idx = self.agent_name_mapping[agent]
         return {
-            "prr": np.array(consts.nodes[idx].prr_value, dtype=np.float32),
+            "prr": np.array(consts.nodes[idx].calculate_prr(), dtype=np.float32),
             "rssi": np.array(consts.nodes[idx].rssi_value, dtype=np.float32),
             "sf": np.array(consts.nodes[idx].sf_value, dtype=np.int64),
         }
