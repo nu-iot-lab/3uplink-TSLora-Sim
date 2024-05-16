@@ -39,7 +39,7 @@ if __name__ == "__main__":
             utils.logging = False
             utils.log(f"!-- TRAINING START --!")
             # Calculate total timesteps for training
-            episodes = 500
+            episodes = 10
             total_timesteps = (
                 sim_time * episodes
             )  # Assuming 1 timestep = 1 second in simulation
@@ -71,19 +71,40 @@ if __name__ == "__main__":
         # uplink_count_rl = []
         total_reward = 0
         done = False
+        rewards_per_node = [[] for _ in range(nodes_count)] 
         while True:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, terminated, info = gym_env.step(action)
-            total_reward += reward
-            rewards_per_evaluation.append(reward)  # Log each reward
+            for i in range(nodes_count):
+                rewards_per_node[i].append(reward[i])
+            # total_reward += reward
+            # rewards_per_evaluation.append(reward)  # Log each reward
             # mean_prr = np.mean([node.calculate_prr() for node in consts.nodes])
             # mean_prrs_rl.append(mean_prr)
             # uplink_count = sum([node.packets_sent_count for node in consts.nodes])
             # uplink_count_rl.append(uplink_count)
+        
+
             if done or terminated:
                 utils.show_final_statistics()
                 utils.log(f"!-- EVALUATION END --!")
                 break
+        
+        for i in range(nodes_count):
+            plt.figure(figsize=(10, 5)) 
+            plt.plot(
+                range(1, len(rewards_per_node[i]) + 1), 
+                rewards_per_node[i], 
+                marker="o", 
+                linestyle="-", 
+                label=f"Node {i + 1}"
+            )
+            plt.title(f"Rewards per Step During Evaluation for Node {i + 1}")
+            plt.xlabel("Step") 
+            plt.ylabel("Reward")
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(f"evaluation_phase_node_{i+1}.png")
 
         # utils.logging = True
         # utils.log(f"!-- EVALUATION START --!")

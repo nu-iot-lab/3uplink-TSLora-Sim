@@ -212,7 +212,7 @@ class EndNode(NetworkNode):
         # mapping actions to uplink attemts
         if self.counter_index == 0:
             if action <= 2:
-                print(f"Action applied: {action}, Uplink attempts set to: {self.uplink_attempts}")
+                # print(f"Action applied: {action}, Uplink attempts set to: {self.uplink_attempts}")
                 self.uplink_attempts = action + 1
             else:
                 raise ValueError(f"Unknown action: {action}")

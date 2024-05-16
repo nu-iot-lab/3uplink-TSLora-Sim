@@ -41,7 +41,7 @@ class LoRaEnv(gym.Env):
         )
 
         # Action space: number of transmission slots (0 = 1, 1 = 2, 2 = 3) for each node
-        self.action_space = spaces.MultiDiscrete([4] * self.nodes_count)
+        self.action_space = spaces.MultiDiscrete([3] * self.nodes_count)
 
         # Observation space: PRR, RSSI, SF for each node
         self.observation_space = spaces.Dict(
@@ -89,7 +89,7 @@ class LoRaEnv(gym.Env):
             )
         self.simulator.env.run(until=timestep)
 
-        reward = self._calculate_reward(
+        reward = self._calculate_rewards(
             # self.previous_mean_prr, self.previous_packets_sent
         )
         obs = self._next_observation()
@@ -133,6 +133,16 @@ class LoRaEnv(gym.Env):
         reward = mean_prr - lambda_value * retransmission_penalty
         # print(f"Reward for STEP [{self.current_step}]: {reward:.3f}")
         return reward
+    
+    def _calculate_rewards(self): 
+        lambda_value = 0.001 
+        rewards = [0] * len(consts.nodes)  
+        for i in range(len(consts.nodes)): 
+            prr = consts.nodes[i].calculate_prr() 
+            retransmission_penalty = lambda_value * consts.nodes[i].packets_sent_count 
+            reward = prr - retransmission_penalty 
+            rewards[i] = reward
+        return rewards
 
     # Reset the environment
     def reset(self, seed=None, options=None):
