@@ -2,10 +2,7 @@ import os
 import datetime
 import simulator.consts as consts
 
-from simulator.singleton import ArgumentSingleton, DataGatewaySingleton
-
-args = ArgumentSingleton.get_instance()
-nodes_count = args.nodes_count
+from simulator.singleton import DataGatewaySingleton
 
 
 def get_log_filename():
@@ -123,7 +120,7 @@ def show_final_statistics():
             f"{node.nr_lost:{max_length}} packets lost, "
             f"{node.nr_collisions:{max_length}} collisions"
         )
-    log(f"Average PRR: {(sum / nodes_count):.3f}")
+    log(f"Average PRR: {(sum / consts.nodes_count):.3f}")
 
     log("\n!-- NETWORK STATISTICS --!\n")
     log(f"Data collisions: {consts.nr_data_collisions}")
@@ -133,10 +130,10 @@ def show_final_statistics():
     log(f"Transmitted SACK packets: {consts.nr_sack_sent}")
     log(f"Missed SACK packets: {consts.nr_sack_missed_count}")
     log(f"Data Retransmissions: {consts.nr_data_retransmissions}")
-    log(f"Average energy consumption (Rx): {(consts.erx / nodes_count):.3f} J")
-    log(f"Average energy consumption (Tx): {(consts.etx / nodes_count):.3f} J")
+    log(f"Average energy consumption (Rx): {(consts.erx / consts.nodes_count):.3f} J")
+    log(f"Average energy consumption (Tx): {(consts.etx / consts.nodes_count):.3f} J")
     log(
-        f"Average energy consumption per node: {consts.total_energy / nodes_count:.3f} J"
+        f"Average energy consumption per node: {consts.total_energy / consts.nodes_count:.3f} J"
     )
     log(
         f"Network PRR (version 1): {(consts.nr_data_packets_sent - consts.nr_data_retransmissions) / consts.nr_data_packets_sent:.3f}"

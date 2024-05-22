@@ -2,15 +2,12 @@ import simulator.consts as consts
 import numpy as np
 from simulator.singleton import (
     DataGatewaySingleton,
-    ArgumentSingleton,
 )
 import random, math
 from simulator.utils import *
 from simulator.communications import DataPacket
 from simulator.broadcast_traffic import BroadcastTraffic
 from simulator.frame import Frame
-
-args = ArgumentSingleton.get_instance()
 
 
 class NetworkNode:
@@ -41,7 +38,7 @@ class DataGateway(Gateway):
     def frame(self, sf):
         if sf > 6:
             return self.frames[sf - 7]
-        raise ValueError("sf must be greater than 6")
+        raise ValueError("SF must be greater than 6")
 
     def transmit_sack(self, env, sf):
         from simulator.communications import SackPacket
@@ -147,9 +144,6 @@ class EndNode(NetworkNode):
         self.data_packet = None
         self.sack_packet_received = env.event()
 
-
-        
-
     def __str__(self):
         # return "EndNode: " + str(self.node_id) + " x: " + str(self.x) + " y: " + str(self.y) + " sf: " + str(self.sf)
         return f"node {self.node_id}: \t x {self.x:3f} \t y {self.y:3f} \t dist {self.dist:4.3f} \t SF {self.sf}"
@@ -226,7 +220,7 @@ class EndNode(NetworkNode):
         while True:
 
             # calculating round start time
-            yield env.timeout(random.uniform(0.0, float(2 * args.avg_wake_up_time)))
+            yield env.timeout(random.uniform(0.0, float(2 * consts.avg_wake_up_time)))
             if self.waiting_first_sack:
                 yield self.sack_packet_received
                 self.waiting_first_sack = False

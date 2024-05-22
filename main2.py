@@ -2,6 +2,7 @@ import sys
 import gymnasium as gym
 import loraenv
 import simulator.utils as utils
+import simulator.consts as consts
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -19,6 +20,11 @@ if __name__ == "__main__":
         avg_wake_up_time = int(sys.argv[3])
         sim_time = int(sys.argv[4])
 
+        consts.nodes_count = nodes_count
+        consts.data_size = data_size
+        consts.avg_wake_up_time = avg_wake_up_time
+        consts.sim_time = sim_time
+
         # Gymnasium environment
         gym_env = gym.make(
             "loraenv/LoRa-v0",
@@ -28,7 +34,7 @@ if __name__ == "__main__":
             sim_time=sim_time,
         )
 
-        train = True
+        train = False
         if train:
             # Create new model
             model = PPO("MultiInputPolicy", gym_env, verbose=1)
@@ -66,15 +72,21 @@ if __name__ == "__main__":
         model = PPO.load("lora_model")
         utils.log(f"!-- EVALUATION START --!")
         obs, info = gym_env.reset()
-        rewards_per_evaluation = [[] for _ in range(nodes_count)]  # List to hold rewards for each node
-        total_rewards_per_node = [0] * nodes_count  # List to hold total rewards for each node
+        rewards_per_evaluation = [
+            [] for _ in range(nodes_count)
+        ]  # List to hold rewards for each node
+        total_rewards_per_node = [
+            0
+        ] * nodes_count  # List to hold total rewards for each node
 
         done = False
         while True:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, terminated, info = gym_env.step(action)
             for i in range(nodes_count):
-                rewards_per_evaluation[i].append(reward[i])  # Log each reward for each node
+                rewards_per_evaluation[i].append(
+                    reward[i]
+                )  # Log each reward for each node
                 total_rewards_per_node[i] += reward[i]  # Sum rewards for each node
 
             if done or terminated:
@@ -90,7 +102,7 @@ if __name__ == "__main__":
                 rewards_per_evaluation[i],
                 marker="o",
                 linestyle="-",
-                label=f'Node {i+1}'
+                label=f"Node {i+1}",
             )
         plt.title("Rewards per Step During Evaluation for Each Node")
         plt.xlabel("Step")

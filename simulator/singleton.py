@@ -2,33 +2,6 @@ import sys
 import simpy
 
 
-class ArgumentSingleton:
-    _instance = None
-
-    @staticmethod
-    def get_instance():
-        if ArgumentSingleton._instance is None:
-            ArgumentSingleton._instance = ArgumentSingleton()
-        return ArgumentSingleton._instance
-
-    def __init__(self):
-        if len(sys.argv) == 5:
-            self.nodes_count = int(sys.argv[1])
-            self.data_size = int(sys.argv[2])
-            self.avg_wake_up_time = int(sys.argv[3])
-            self.sim_time = int(sys.argv[4])
-
-        else:
-            self.nodes_count = 10
-            self.data_size = 16
-            self.avg_wake_up_time = 30 * 1000
-            self.sim_time = 3600 * 1000
-            # print(
-            #     "usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
-            # )
-            # exit(-1)
-
-
 class DataGatewaySingleton:
     _instance = None
 
