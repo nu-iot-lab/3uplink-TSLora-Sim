@@ -3,16 +3,46 @@ import sys
 import ray
 import logging
 import simulator.consts as consts
+import matplotlib.pyplot as plt
 
 from ray import tune
 from ray.rllib.algorithms.dqn import DQNConfig
 from ray.rllib.algorithms.dqn import DQN
 from ray.rllib.env import PettingZooEnv
 from ray.tune.registry import register_env
+from ray.tune.logger import TBXLoggerCallback
 
 from multienv.multienv_v0 import env
 
 logging.basicConfig(level=logging.INFO)
+
+def plot_metrics(df):
+    # Create a figure with 2 subplots arranged vertically
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+
+    # Plot mean episode reward on the first subplot
+    if 'episode_reward_mean' in df.columns:
+        df['episode_reward_mean'].plot(ax=ax[0])
+        ax[0].set_title('Mean Episode Reward')
+        ax[0].set_xlabel('Training Iterations')
+        ax[0].set_ylabel('Reward')
+    else:
+        logging.warning("No 'episode_reward_mean' column found in results.")
+        ax[0].text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center')
+
+    # Plot mean episode length on the second subplot
+    if 'episode_len_mean' in df.columns:
+        df['episode_len_mean'].plot(ax=ax[1])
+        ax[1].set_title('Mean Episode Length')
+        ax[1].set_xlabel('Training Iterations')
+        ax[1].set_ylabel('Length')
+    else:
+        logging.warning("No 'episode_len_mean' column found in results.")
+        ax[1].text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center')
+
+    # Adjust layout and display the plots
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     if len(sys.argv) == 5:
@@ -79,7 +109,7 @@ if __name__ == "__main__":
                     "type": "EpsilonGreedy",
                     "initial_epsilon": 0.1,
                     "final_epsilon": 0.0,
-                    "epsilon_timesteps": 100000,
+                    "epsilon_timesteps": 1000000,
                 },
             )
             .training(
@@ -94,18 +124,30 @@ if __name__ == "__main__":
                 },
                 policy_mapping_fn=(lambda agent_id, *args, **kwargs: agent_id),
             )
-            .resources(num_gpus=1)
+            .resources(num_gpus=0)
             .framework(framework="torch")
         )
 
         try:
-            tune.run(
+            analysis = tune.run(
                 DQN,
                 name="DQN_LoRaEnvParallel",
-                stop={"timesteps_total": 1000000},
-                checkpoint_freq=10,
+                stop={"timesteps_total": 1000},
+                checkpoint_freq=100,
+                keep_checkpoints_num=5,
+                checkpoint_score_attr="training_iteration",
                 config=config.to_dict(),
+                local_dir="~/ray_results",  # Specify the directory for logging
+                callbacks=[TBXLoggerCallback()],
+                log_to_file=True,
             )
+
+            # Get the best trial
+            best_trial = analysis.get_best_trial("episode_reward_mean", mode="max")
+
+            # Use TensorBoard to visualize results
+            print(f"Training completed. Use TensorBoard to visualize results: tensorboard --logdir {best_trial.local_path}")
+
         except Exception as e:
             logging.error(f"An error occurred during training: {e}")
             raise
