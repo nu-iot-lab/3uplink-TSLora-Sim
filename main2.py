@@ -1,17 +1,58 @@
+import os
 import sys
-import gymnasium as gym
-import loraenv
-import simulator.utils as utils
-import simulator.consts as consts
-import matplotlib.pyplot as plt
-
-import numpy as np
+import ray
+import logging
 import simulator.consts as consts
 
-from simulator.lora_simulator import LoraSimulator
-from reward_caller_callback import RewardLoggerCallback
+from ray import tune
+from ray.rllib.algorithms.dqn import DQNConfig
+from ray.rllib.algorithms.dqn import DQN
+from ray.rllib.env import PettingZooEnv
+from ray.tune.registry import register_env
+from ray.tune.logger import TBXLoggerCallback
+from torch.utils.tensorboard import SummaryWriter
 
-from stable_baselines3 import PPO
+from multienv.multienv_v0 import env
+
+logging.basicConfig(level=logging.INFO)
+
+class CustomMetricsCallback(tune.Callback):
+    def __init__(self, logdir):
+        self.logdir = logdir
+        self.writer = SummaryWriter(log_dir=logdir)
+
+    def on_episode_end(self, *, worker, base_env, policies, episode, **kwargs):
+        env = base_env.get_unwrapped()[0]
+        total_steps = episode.length
+        total_uplinks = sum(episode.custom_metrics[agent]["uplink_attempts"] for agent in env.possible_agents)
+        total_reward = sum(episode.reward[agent] for agent in env.possible_agents)
+        uplinks_per_node = {agent: episode.custom_metrics[agent]["uplink_attempts"] for agent in env.possible_agents}
+
+        uplinks_per_step = total_uplinks / total_steps if total_steps > 0 else 0
+        reward_per_uplink = total_reward / total_uplinks if total_uplinks > 0 else 0
+
+        episode.custom_metrics["total_uplinks"] = total_uplinks
+        episode.custom_metrics["total_steps"] = total_steps
+        episode.custom_metrics["uplinks_per_step"] = uplinks_per_step
+        episode.custom_metrics["reward_per_uplink"] = reward_per_uplink
+        episode.custom_metrics["uplinks_per_node"] = uplinks_per_node
+
+        logging.info(f"Episode {episode.episode_id} ended with {total_uplinks} total uplinks, "
+                     f"{total_steps} steps, {uplinks_per_step:.4f} uplinks per step, "
+                     f"{reward_per_uplink:.4f} reward per uplink, and {uplinks_per_node} uplink attempts.")
+
+        # Log custom metrics to TensorBoard
+        self.writer.add_scalar("Metrics/Total_Uplinks", total_uplinks, episode.episode_id)
+        self.writer.add_scalar("Metrics/Reward_Per_Uplink", reward_per_uplink, episode.episode_id)
+        
+        for agent, uplinks in uplinks_per_node.items():
+            self.writer.add_scalar(f"Metrics/Uplinks_Per_Node/{agent}", uplinks, episode.episode_id)
+
+    def on_trial_end(self, iteration, trials, trial, **info):
+        self.writer.flush()
+
+    def on_experiment_end(self, **kwargs):
+        self.writer.close()
 
 if __name__ == "__main__":
     if len(sys.argv) == 5:
@@ -25,94 +66,95 @@ if __name__ == "__main__":
         consts.avg_wake_up_time = avg_wake_up_time
         consts.sim_time = sim_time
 
-        # Gymnasium environment
-        gym_env = gym.make(
-            "loraenv/LoRa-v0",
-            nodes_count=nodes_count,
-            data_size=data_size,
-            avg_wake_up_time=avg_wake_up_time,
-            sim_time=sim_time,
+        ray.init()
+
+        # Register the environment
+        def create_env(config):
+            env_instance = env(
+                nodes_count=nodes_count,
+                data_size=data_size,
+                avg_wake_up_time=avg_wake_up_time,
+                sim_time=sim_time,
+            )
+            logging.info(f"Custom Env possible_agents: {env_instance.possible_agents}")
+            return PettingZooEnv(env_instance)
+
+        register_env("LoRaEnvParallel", create_env)
+
+        # Create a test environment to get observation and action spaces
+        test_env = create_env(
+            {
+                "nodes_count": nodes_count,
+                "data_size": data_size,
+                "avg_wake_up_time": avg_wake_up_time,
+                "sim_time": sim_time,
+            }
+        )
+        logging.info(f"Wrapped Env possible_agents: {test_env.env.possible_agents}")
+
+        # Check if possible_agents exists
+        if hasattr(test_env.env, "possible_agents"):
+            obs_space = test_env.env.observation_space(test_env.env.possible_agents[0])
+            act_space = test_env.env.action_space(test_env.env.possible_agents[0])
+        else:
+            raise AttributeError(
+                "The environment does not have 'possible_agents' attribute."
+            )
+
+        config = (
+            DQNConfig()
+            .environment(
+                env="LoRaEnvParallel",
+                env_config={
+                    "nodes_count": nodes_count,
+                    "data_size": data_size,
+                    "avg_wake_up_time": avg_wake_up_time,
+                    "sim_time": sim_time,
+                },
+            )
+            .env_runners(
+                num_env_runners=1,
+                rollout_fragment_length=30,
+                exploration_config={
+                    "type": "EpsilonGreedy",
+                    "initial_epsilon": 0.1,
+                    "final_epsilon": 0.0,
+                    "epsilon_timesteps": 100000,
+                },
+            )
+            .training(
+                train_batch_size=200,
+                hiddens=[],
+                dueling=False,
+            )
+            .multi_agent(
+                policies={
+                    agent: (None, obs_space, act_space, {})
+                    for agent in test_env.env.possible_agents
+                },
+                policy_mapping_fn=(lambda agent_id, *args, **kwargs: agent_id),
+            )
+            .resources(num_gpus=0)
+            .framework(framework="torch")
         )
 
-        train = False
-        if train:
-            # Create new model
-            model = PPO("MultiInputPolicy", gym_env, verbose=1)
-            reward_logger = RewardLoggerCallback()
-
-            # Training Phase
-            # --------------
-            utils.logging = False
-            utils.log(f"!-- TRAINING START --!")
-            # Calculate total timesteps for training
-            episodes = 10
-            total_timesteps = (
-                sim_time * episodes
-            )  # Assuming 1 timestep = 1 second in simulation
-            model.learn(
-                total_timesteps=total_timesteps,
-                log_interval=4,
-                progress_bar=True,
-                callback=reward_logger,
+        try:
+            logdir = "~/ray_results"
+            tune.run(
+                DQN,
+                name="DQN_LoRaEnvParallel",
+                stop={"timesteps_total": 100000},
+                checkpoint_freq=10,
+                config=config.to_dict(),
+                local_dir=logdir,  # Specify the directory for logging
+                callbacks=[TBXLoggerCallback(), CustomMetricsCallback(logdir)],
+                log_to_file=True,
             )
-            model.save("lora_model")
-            utils.log(f"!-- TRAINING END --!")
-
-            # Plot the rewards collected during the training
-            plt.figure(figsize=(10, 5))
-            plt.plot(reward_logger.episode_rewards, marker="o", linestyle="-")
-            plt.title("Total Reward per Episode During Training")
-            plt.xlabel("Episode")
-            plt.ylabel("Total Reward")
-            plt.grid(True)
-            plt.savefig("training_phase.png")
-
-        # Evaluation Phase
-        # ----------------
-        model = PPO.load("lora_model")
-        utils.log(f"!-- EVALUATION START --!")
-        obs, info = gym_env.reset()
-        rewards_per_evaluation = [
-            [] for _ in range(nodes_count)
-        ]  # List to hold rewards for each node
-        total_rewards_per_node = [
-            0
-        ] * nodes_count  # List to hold total rewards for each node
-
-        done = False
-        while True:
-            action, _states = model.predict(obs, deterministic=True)
-            obs, reward, done, terminated, info = gym_env.step(action)
-            for i in range(nodes_count):
-                rewards_per_evaluation[i].append(
-                    reward[i]
-                )  # Log each reward for each node
-                total_rewards_per_node[i] += reward[i]  # Sum rewards for each node
-
-            if done or terminated:
-                utils.show_final_statistics()
-                utils.log(f"!-- EVALUATION END --!")
-                break
-
-        # Plot the rewards collected during the evaluation for each node
-        plt.figure(figsize=(10, 5))
-        for i in range(nodes_count):
-            plt.plot(
-                range(1, len(rewards_per_evaluation[i]) + 1),
-                rewards_per_evaluation[i],
-                marker="o",
-                linestyle="-",
-                label=f"Node {i+1}",
-            )
-        plt.title("Rewards per Step During Evaluation for Each Node")
-        plt.xlabel("Step")
-        plt.ylabel("Reward")
-        plt.legend()
-        plt.grid(True)
-        plt.savefig("evaluation_phase_per_node.png")
-
+        except Exception as e:
+            logging.error(f"An error occurred during training: {e}")
+            raise
     else:
         print(
-            "usage: ./main <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
+            "usage: python main3.py <number_of_nodes> <data_size(bytes)> <avg_wake_up_time(secs)> <sim_time(secs)>"
         )
         exit(-1)

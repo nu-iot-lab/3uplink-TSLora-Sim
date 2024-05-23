@@ -132,7 +132,7 @@ if __name__ == "__main__":
             analysis = tune.run(
                 DQN,
                 name="DQN_LoRaEnvParallel",
-                stop={"timesteps_total": 1000},
+                stop={"timesteps_total": 100000},
                 checkpoint_freq=100,
                 keep_checkpoints_num=5,
                 checkpoint_score_attr="training_iteration",
