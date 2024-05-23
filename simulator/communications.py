@@ -6,7 +6,6 @@ import numpy as np
 import math
 import random
 from simulator.channels import Channels
-from simulator.singleton import ArgumentSingleton
 
 
 class Packet:
@@ -174,7 +173,7 @@ class DataPacket(Packet):
         self.sf = sf
         self.bw = 125
         self.freq = Channels.get_sf_freq(sf)
-        self.pl = ArgumentSingleton.get_instance().data_size
+        self.pl = consts.data_size
         self.rec_time = self.airtime()
 
     def update_statistics(self):

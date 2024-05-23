@@ -2,6 +2,7 @@ import sys
 import gymnasium as gym
 import loraenv
 import simulator.utils as utils
+import simulator.consts as consts
 import matplotlib.pyplot as plt
 
 from simulator.lora_simulator import LoraSimulator
@@ -15,6 +16,11 @@ if __name__ == "__main__":
         data_size = int(sys.argv[2])
         avg_wake_up_time = int(sys.argv[3])
         sim_time = int(sys.argv[4])
+
+        consts.nodes_count = nodes_count
+        consts.data_size = data_size
+        consts.avg_wake_up_time = avg_wake_up_time
+        consts.sim_time = sim_time
 
         # Gymnasium environment
         gym_env = gym.make(

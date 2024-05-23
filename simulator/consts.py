@@ -1,4 +1,5 @@
 import numpy as np
+
 from collections import defaultdict
 
 # CONSTANTS
@@ -23,10 +24,6 @@ iso_thresholds = np.array([IS7, IS8, IS9, IS10, IS11, IS12])
 # power consumptions for transmitting, receiving, and operating in mA
 pow_cons = [75, 45, 30]
 V = 3.3  # voltage
-
-# global
-data_gateway = None
-nodes = []
 
 coding_rate = 1
 drifting_range = [-0.2, 0.2]
@@ -75,3 +72,12 @@ nr_sack_missed_count = 0
 total_energy = 0
 erx = 0
 etx = 0
+
+# Default values for parameters (to be overwritten)
+nodes_count = 10
+data_size = 16
+avg_wake_up_time = 30
+sim_time = 3600
+
+data_gateway = None
+nodes = []
