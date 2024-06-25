@@ -87,13 +87,17 @@ class LoRaEnvParallel(ParallelEnv):
             self.simulator.start_simulation()
         if self.current_step >= self.sim_time:
             self.done = True
-            reward = self._calculate_reward()
             observations = {
                 agent: self.observe(agent) for agent in self.possible_agents
             }
+            rewards = {
+                agent: self._calculate_reward(self.agent_name_mapping[agent])
+                for agent in self.possible_agents
+            }
+            dones = {agent: self.done for agent in self.possible_agents}
             infos = {agent: {} for agent in self.possible_agents}
             logging.info("Simulation done.")
-            return observations, reward, self.done, infos
+            return observations, rewards, dones, dones, infos
 
         for agent in actions:
             agent_index = self.agent_name_mapping[agent]
@@ -114,14 +118,14 @@ class LoRaEnvParallel(ParallelEnv):
             agent: self._calculate_reward(self.agent_name_mapping[agent])
             for agent in self.possible_agents
         }
-        self.done = self.current_step >= self.sim_time
+        dones = {
+            agent: self.current_step >= self.sim_time for agent in self.possible_agents
+        }
+        truncations = {agent: self.truncated for agent in self.possible_agents}
         infos = {agent: {} for agent in self.possible_agents}
 
         if self.render_mode == "human":
             self.render()
-
-        dones = {agent: self.done for agent in self.possible_agents}
-        truncations = {agent: self.truncated for agent in self.possible_agents}
 
         return observations, rewards, dones, truncations, infos
 

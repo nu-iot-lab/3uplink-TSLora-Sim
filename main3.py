@@ -16,33 +16,47 @@ from multienv.multienv_v0 import env
 
 logging.basicConfig(level=logging.INFO)
 
+
 def plot_metrics(df):
     # Create a figure with 2 subplots arranged vertically
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
 
     # Plot mean episode reward on the first subplot
-    if 'episode_reward_mean' in df.columns:
-        df['episode_reward_mean'].plot(ax=ax[0])
-        ax[0].set_title('Mean Episode Reward')
-        ax[0].set_xlabel('Training Iterations')
-        ax[0].set_ylabel('Reward')
+    if "episode_reward_mean" in df.columns:
+        df["episode_reward_mean"].plot(ax=ax[0])
+        ax[0].set_title("Mean Episode Reward")
+        ax[0].set_xlabel("Training Iterations")
+        ax[0].set_ylabel("Reward")
     else:
         logging.warning("No 'episode_reward_mean' column found in results.")
-        ax[0].text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center')
+        ax[0].text(
+            0.5,
+            0.5,
+            "No Data",
+            horizontalalignment="center",
+            verticalalignment="center",
+        )
 
     # Plot mean episode length on the second subplot
-    if 'episode_len_mean' in df.columns:
-        df['episode_len_mean'].plot(ax=ax[1])
-        ax[1].set_title('Mean Episode Length')
-        ax[1].set_xlabel('Training Iterations')
-        ax[1].set_ylabel('Length')
+    if "episode_len_mean" in df.columns:
+        df["episode_len_mean"].plot(ax=ax[1])
+        ax[1].set_title("Mean Episode Length")
+        ax[1].set_xlabel("Training Iterations")
+        ax[1].set_ylabel("Length")
     else:
         logging.warning("No 'episode_len_mean' column found in results.")
-        ax[1].text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center')
+        ax[1].text(
+            0.5,
+            0.5,
+            "No Data",
+            horizontalalignment="center",
+            verticalalignment="center",
+        )
 
     # Adjust layout and display the plots
     plt.tight_layout()
     plt.show()
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 5:
@@ -56,7 +70,7 @@ if __name__ == "__main__":
         consts.avg_wake_up_time = avg_wake_up_time
         consts.sim_time = sim_time
 
-        ray.init()
+        ray.init(num_cpus=12, num_gpus=0)
 
         # Register the environment
         def create_env(config):
@@ -109,7 +123,7 @@ if __name__ == "__main__":
                     "type": "EpsilonGreedy",
                     "initial_epsilon": 0.1,
                     "final_epsilon": 0.0,
-                    "epsilon_timesteps": 1000000,
+                    "epsilon_timesteps": 100000,
                 },
             )
             .training(
@@ -146,7 +160,9 @@ if __name__ == "__main__":
             best_trial = analysis.get_best_trial("episode_reward_mean", mode="max")
 
             # Use TensorBoard to visualize results
-            print(f"Training completed. Use TensorBoard to visualize results: tensorboard --logdir {best_trial.local_path}")
+            print(
+                f"Training completed. Use TensorBoard to visualize results: tensorboard --logdir {best_trial.local_path}"
+            )
 
         except Exception as e:
             logging.error(f"An error occurred during training: {e}")
